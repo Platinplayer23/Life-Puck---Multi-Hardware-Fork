@@ -1,65 +1,110 @@
-# LifePuck Project
+# Life Puck - Multi-Hardware Fork
 
-LifePuck is a digital life counter and utility for tabletop and TCG games, designed for the [Waveshare ESP32-S3 1.85inch Round Display](https://www.waveshare.com/esp32-s3-touch-lcd-1.85.htm) board. It features a 1.85" LCD screen with capacitive touch.
+[![Platform](https://img.shields.io/badge/platform-ESP32--S3-blue.svg)](https://www.espressif.com/en/products/socs/esp32-s3)
+[![Framework](https://img.shields.io/badge/framework-Arduino-00979D.svg)](https://www.arduino.cc/)
+[![LVGL](https://img.shields.io/badge/LVGL-9.3.0-green.svg)](https://lvgl.io/)
+[![License](https://img.shields.io/github/license/jontiritilli/life-puck)](LICENSE)
 
-The goal of this project is to provide a simple, intuitive, and visually appealing life counter for Flesh and Blood, Magic: The Gathering, Pokémon TCG, and others. It supports both single-player and two-player modes, with customizable settings, additional modes quick reset options, and a robust history.
+**A digital life counter for Magic: The Gathering, Flesh and Blood, Pokémon TCG, and other tabletop games.**
 
-If you have a capable 3D printer, you can also print a case for the device. The case is designed to be compact and portable, making it easy to carry around. It also fits the Waveshare ESP32-S3 board and the battery snugly, providing protection and a professional look.
+This is a fork of [jontiritilli/life-puck](https://github.com/jontiritilli/life-puck) with extended hardware support for multiple Waveshare ESP32-S3 display variants.
 
-## Product Links
+---
 
-- [Waveshare Board Amazon link](https://a.co/d/g4B9fnk)
-- [Battery Amazon Link](https://a.co/d/2o6Rkg9)
-- [3d Printed Case](https://makerworld.com/en/models/1635526-game-puck#profileId-1727766)
+## 📋 Table of Contents
 
-## Hardware Information
+- [Hardware Support](#-hardware-support)
+- [New Features](#-new-features-in-this-fork)
+- [Getting Started](#-getting-started)
+- [Installation Guide](#-installation-guide)
+- [Touch Calibration](#-touch-calibration)
+- [Adding Custom Presets](#-adding-custom-presets)
+- [Usage Guide](#-usage-guide)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
+- [Credits](#-credits)
+- [License](#-license)
 
-- [Waveshare ESP32-S3-Touch-LCD-1.85 Wiki](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85)
-  - [Hardware Overview](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85#Hardware_Overview)
-  - [Pinout](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85#Pinout)
-  - [Schematic](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85#Schematic)
-  - [Resources](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85#Resources)
+---
 
-## 3D Printed Case
+## 🔧 Hardware Support
 
-The case was designed by someone else. I remixed it and modified it (within the license parameters) to be more fitting for this use case. You can find the design files here: [Game Puck Case](https://makerworld.com/en/models/1635526-game-puck#profileId-1727766)
+This fork supports **two** Waveshare ESP32-S3 display variants:
 
-## Software Features
+### Supported Boards
 
-- One and two player life counter modes
-- Configurable base life settings
-- Configurable increment/decrement step sizes
-- Built-in timer for tracking game duration
-- Quick reset
-- In-app configuration menus for settings and preferences
-- Life change history tracking
-- Event grouping window for precise control over adjustments to life totals
-- Smooth LVGL-based UI animations
-- Robust state management and crash prevention
-- Modular code structure for easy extension
+| Board | Display | Touch | GPIO Expander | AliExpress Bundle |
+|-------|---------|-------|---------------|-------------------|
+| **[ESP32-S3-Touch-LCD-1.85C](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85C)** | ST77916 (QSPI) | CST816 | ✅ TCA9554 | ✅ **Recommended** (includes case + battery) |
+| **[ESP32-S3-Touch-LCD-1.85](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85)** | ST77916 (QSPI) | CST816 | ❌ None | ❌ More expensive |
 
-## Getting Started
+> **💡 Cost Tip:** The **1.85C variant** is significantly cheaper on AliExpress when purchased as a bundle with case and battery!
 
-### Pre-requisites
+### Hardware Specifications
 
-- Knowledge of C++ and embedded programming
-- Familiarity with PlatformIO and ESP32 development
-- VS Code installed on your machine
-- Waveshare ESP32-S3 1.85inch Round Display board
+- **MCU:** ESP32-S3-WROOM-1 (N16R8) - 16MB Flash, 8MB PSRAM
+- **Display:** 1.85" Round LCD, 360x360px, ST77916 driver (QSPI mode)
+- **Touch:** Capacitive touch screen, CST816 controller
+- **Connectivity:** USB-C, Wi-Fi, Bluetooth
 
-### Steps
+---
 
-1. **Clone this repository**
-1. **Install PlatformIO:** [https://platformio.org/install](https://platformio.org/install)
-1. **Connect your ESP32-S3 board** via USB.
-1. **Build and upload:**
+## 🆕 New Features in This Fork
 
-   ```sh
-   pio run -t upload
-   ```
+### Multi-Hardware Support
+- ✅ **Dual board support**: ESP32-S3-Touch-LCD-1.85C and 1.85
+- ✅ **GPIO Expander handling**: Automatic detection and configuration for TCA9554
+- ✅ **Unified codebase**: Single project for both hardware variants
 
-1. **Open the serial monitor:**
+### Build System Improvements
+- ✅ **Arduino 3.x support**: Uses latest ESP-IDF 5.3 based framework via [pioarduino](https://github.com/pioarduino/platform-espressif32)
+- ✅ **Multi-environment builds**: Switch between boards with `platformio.ini` environments
+- ✅ **Modern LVGL 9.3.0**: Updated graphics library with performance improvements
 
-   ```sh
-   pio device monitor -b 115200
-   ```
+### Display & Touch Enhancements
+- ✅ **QSPI display support**: High-speed display interface for smoother animations
+- ✅ **Touch calibration**: Configurable touch scaling for accurate input
+- ✅ **Improved responsiveness**: Better touch detection and debouncing
+
+### Developer Experience
+- ✅ **Comprehensive documentation**: Detailed setup and configuration guides
+- ✅ **Preset system**: Pre-compile custom game presets to avoid on-device keyboard
+- ✅ **Better error handling**: Improved crash recovery and state management
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Operating System:** Windows, macOS, or Linux
+- **IDE:** Visual Studio Code (recommended)
+- **Knowledge:** Basic understanding of C++ and embedded systems
+- **Hardware:** One of the supported Waveshare ESP32-S3 boards
+
+### Required Software
+
+1. **Visual Studio Code**: [Download](https://code.visualstudio.com/)
+2. **PlatformIO Extension**: Install from VS Code marketplace
+3. **USB Drivers**: CH340 or CP210x (usually auto-installed)
+
+---
+
+## 📦 Installation Guide
+
+### Step 1: Install Visual Studio Code
+
+1. Download VS Code from [https://code.visualstudio.com/](https://code.visualstudio.com/)
+2. Install and launch VS Code
+
+### Step 2: Install PlatformIO
+
+1. Open VS Code
+2. Go to **Extensions** (Ctrl+Shift+X)
+3. Search for **"PlatformIO IDE"**
+4. Click **Install**
+5. Restart VS Code when prompted
+
+### Step 3: Clone This Repository
+
+**Option A: Using Git (recommended)**

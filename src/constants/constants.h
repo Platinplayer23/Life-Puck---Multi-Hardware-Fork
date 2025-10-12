@@ -1,7 +1,7 @@
 #pragma once
 #include "lvgl.h"
 
-#define SCREEN_WIDTH 360 // Default, or set dynamically at runtime
+#define SCREEN_WIDTH 360
 #define SCREEN_HEIGHT 360
 #define SCREEN_DIAMETER SCREEN_WIDTH
 #define ARC_WIDTH 8
@@ -33,7 +33,11 @@ enum MenuState
   MENU_SETTINGS,
   MENU_LIFE_CONFIG,
   MENU_HISTORY,
-  MENU_BRIGHTNESS
+  MENU_BRIGHTNESS,
+  MENU_TCG, 
+  MENU_DICE_LIST,
+  MENU_PRESET_LIST,
+  MENU_PRESET_EDITOR    // NEU: Preset-Editor
 };
 
 enum ContextualQuadrant
@@ -45,18 +49,18 @@ enum ContextualQuadrant
   QUADRANT_EXIT = 4
 };
 
-// Color Constants (RGB format)
+// Color Constants
 #include "lvgl.h"
 #define GREEN_COLOR lv_color_hex(0x00e31f)
 #define YELLOW_COLOR lv_color_hex(0xebf700)
 #define RED_COLOR lv_color_hex(0xe80000)
-#define LIGHTNING_BLUE_COLOR lv_color_hex(0x0070ff) // lightning blue
+#define LIGHTNING_BLUE_COLOR lv_color_hex(0x0070ff)
 #define WHITE_COLOR lv_color_hex(0xffffff)
 #define BLACK_COLOR lv_color_hex(0x000000)
 #define GRAY_COLOR lv_color_hex(0x808080)
 #define DARK_GRAY_COLOR lv_color_hex(0x404040)
-#define AMP_START_COLOR YELLOW_COLOR // Initial color for amp button
-#define AMP_END_COLOR RED_COLOR      // Final color for amp button
+#define AMP_START_COLOR YELLOW_COLOR
+#define AMP_END_COLOR RED_COLOR
 
 // Constants for StateStore
 #define PLAYER_STORE "player_store"
@@ -67,6 +71,7 @@ enum ContextualQuadrant
 #define KEY_LIFE_STEP_SMALL "life_step_small"
 #define KEY_LIFE_STEP_LARGE "life_step_large"
 #define KEY_SHOW_TIMER "show_timer"
+#define KEY_SWIPE_TO_CLOSE "swipe_close"  // NEU
 
 // define for life increment levels small and large
 #define DEFAULT_LIFE_INCREMENT_SMALL 1

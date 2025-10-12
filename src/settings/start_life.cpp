@@ -71,49 +71,12 @@ void shared_ta_event_cb(lv_event_t *e)
   }
 }
 
-struct NumberInputData
-{
-  int *target_var;
-  lv_obj_t *ta;
-  lv_obj_t *kb;
-};
-// Forward declaration
-void create_number_input(lv_obj_t *parent, int *target_var, int initial_value, const char *label_text);
-
-static void number_input_event_cb(lv_event_t *e)
-{
-  NumberInputData *data = (NumberInputData *)lv_event_get_user_data(e);
-  lv_obj_t *ta = data->ta;
-  lv_obj_t *kb = data->kb;
-  lv_event_code_t code = lv_event_get_code(e);
-  if (code == LV_EVENT_FOCUSED)
-  {
-    lv_keyboard_set_textarea(kb, ta);
-    lv_obj_clear_flag(kb, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_move_foreground(kb); // Bring keyboard to front
-  }
-  if (code == LV_EVENT_DEFOCUSED)
-  {
-    lv_keyboard_set_textarea(kb, NULL);
-    lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
-  }
-  if (code == LV_EVENT_VALUE_CHANGED)
-  {
-    int value = atoi(lv_textarea_get_text(ta));
-    if (value >= 0 && value < 10000)
-    {
-      *(data->target_var) = value;
-    }
-  }
-}
-
 static const char *kb_map[] = {
     "7", "8", "9", "\n",
     "4", "5", "6", "\n",
     "1", "2", "3", "\n",
     LV_SYMBOL_BACKSPACE, "0", LV_SYMBOL_OK, NULL};
 
-/*Set the relative width of the buttons and other controls*/
 static const lv_buttonmatrix_ctrl_t kb_ctrl[] = {
     LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1,
     LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1,
@@ -123,7 +86,6 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl[] = {
 // Save button event callback
 static void handle_save()
 {
-  // add save logic here
   printf("Save button clicked\n");
   player_store.putInt(KEY_LIFE_MAX, max_life);
   player_store.putInt(KEY_LIFE_STEP_SMALL, small_step);
@@ -150,14 +112,14 @@ void renderLifeConfigScreen()
   // Create the main menu object
   life_config_menu = lv_obj_create(lv_scr_act());
   lv_obj_set_size(life_config_menu, SCREEN_WIDTH, SCREEN_HEIGHT);
-  lv_obj_set_style_bg_color(life_config_menu, BLACK_COLOR, LV_PART_MAIN); // dark background
+  lv_obj_set_style_bg_color(life_config_menu, BLACK_COLOR, LV_PART_MAIN);
   lv_obj_set_style_bg_opa(life_config_menu, LV_OPA_COVER, LV_PART_MAIN);
   lv_obj_set_style_border_opa(life_config_menu, LV_OPA_TRANSP, LV_PART_MAIN);
   lv_obj_set_style_outline_opa(life_config_menu, LV_OPA_TRANSP, LV_PART_MAIN);
   lv_obj_set_style_radius(life_config_menu, LV_RADIUS_CIRCLE, LV_PART_MAIN);
   lv_obj_set_style_pad_all(life_config_menu, 16, LV_PART_MAIN);
 
-  // Define grid: 5 rows, 1 column
+  // Define grid: 4 rows, 2 columns
   static lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   static lv_coord_t row_dsc[] = {70, 70, 70, 70, LV_GRID_TEMPLATE_LAST};
   lv_obj_set_grid_dsc_array(life_config_menu, col_dsc, row_dsc);
@@ -228,19 +190,19 @@ void renderLifeConfigScreen()
   snprintf(buf, sizeof(buf), "%d", large_step);
   lv_label_set_text(lbl_large_step_val, buf);
   lv_obj_center(lbl_large_step_val);
+
   static SharedInputState shared_input_state = {nullptr, nullptr, nullptr, nullptr};
 
-  // Create shared text area and keyboard
-  // Create shared text area above keyboard, not overlapping
+  // Create shared text area - HÖHER POSITIONIERT
   shared_input_state.ta = lv_textarea_create(life_config_menu);
   lv_textarea_set_one_line(shared_input_state.ta, true);
-  lv_obj_set_style_text_font(shared_input_state.ta, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_font(shared_input_state.ta, &lv_font_montserrat_32, 0);  // Größer
   lv_obj_set_style_text_color(shared_input_state.ta, lv_color_white(), 0);
-  lv_obj_set_size(shared_input_state.ta, SCREEN_WIDTH - 120, 50);
-  lv_obj_align(shared_input_state.ta, LV_ALIGN_TOP_MID, 0, 30);
+  lv_obj_set_size(shared_input_state.ta, SCREEN_WIDTH - 120, 60);
+  lv_obj_align(shared_input_state.ta, LV_ALIGN_TOP_MID, 0, 20);  // Höher
   lv_obj_add_flag(shared_input_state.ta, LV_OBJ_FLAG_HIDDEN);
 
-  // Create shared keyboard, docked below textarea
+  // Create shared keyboard
   shared_input_state.kb = lv_keyboard_create(life_config_menu);
   lv_keyboard_set_mode(shared_input_state.kb, LV_KEYBOARD_MODE_NUMBER);
   lv_obj_add_flag(shared_input_state.kb, LV_OBJ_FLAG_HIDDEN);

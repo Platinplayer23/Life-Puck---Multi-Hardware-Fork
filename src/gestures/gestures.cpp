@@ -1,39 +1,35 @@
-// gestures.cpp
-// LVGL gesture handling for LifePuck application
-// Ready to be wired to CST816S touch controller
-
 #include <lvgl.h>
 #include <functional>
 #include <map>
 #include <stdio.h>
 #include "gestures.h"
 #include <constants/constants.h>
+#include "../state/state_store.h"
 
-// Callback type for gestures
 using GestureCallback = std::function<void()>;
 
-// Gesture callback registry
 static std::map<GestureType, GestureCallback> gesture_callbacks;
 
-// Register a callback for a gesture
 void register_gesture_callback(GestureType gesture, GestureCallback cb)
 {
   gesture_callbacks[gesture] = cb;
 }
 
-// Call the callback for a gesture
 void trigger_gesture(GestureType gesture)
 {
   if (gesture_callbacks.count(gesture))
   {
+    printf("[Gesture] Triggering: %d\n", (int)gesture);
     gesture_callbacks[gesture]();
+  }
+  else
+  {
+    printf("[Gesture] No callback for: %d\n", (int)gesture);
   }
 }
 
-// Example LVGL event handler for tap/swipe (to be wired to touch events)
 void lvgl_gesture_event_handler(lv_event_t *e)
 {
-  // Track if a swipe or long press was detected in this touch sequence
   static bool swipe_detected = false;
   static bool long_press_active = false;
   lv_obj_t *obj = (lv_obj_t *)lv_event_get_target(e);
@@ -43,8 +39,11 @@ void lvgl_gesture_event_handler(lv_event_t *e)
   if (indev)
   {
     lv_indev_get_point(indev, &point);
-    // printf("[lvgl_gesture_event_handler] Event code=%d, point=(%d, %d)\n", code, point.x, point.y);
   }
+
+  // Player Mode prüfen
+  PlayerMode player_mode = (PlayerMode)player_store.getInt(KEY_PLAYER_MODE, PLAYER_MODE_ONE_PLAYER);
+  bool is_two_player = (player_mode == PLAYER_MODE_TWO_PLAYER);
 
   if (code == LV_EVENT_PRESSED)
   {
@@ -54,16 +53,35 @@ void lvgl_gesture_event_handler(lv_event_t *e)
   else if (code == LV_EVENT_GESTURE)
   {
     lv_dir_t dir = lv_indev_get_gesture_dir(indev);
-    if (dir == LV_DIR_TOP)
+    
+    // Swipe Down = Big Step MINUS
+    if (dir == LV_DIR_BOTTOM)
     {
-      // Generic swipe up
-      trigger_gesture(GestureType::SwipeUp);
+      if (is_two_player) {
+        bool is_left = (point.x < SCREEN_WIDTH / 2);
+        if (is_left) {
+          trigger_gesture(GestureType::LongPressBottomLeft);  // Big step -
+        } else {
+          trigger_gesture(GestureType::LongPressBottomRight);
+        }
+      } else {
+        trigger_gesture(GestureType::LongPressBottom);  // Big step -
+      }
       swipe_detected = true;
     }
-    else if (dir == LV_DIR_BOTTOM)
+    // Swipe Up = Big Step PLUS
+    else if (dir == LV_DIR_TOP)
     {
-      // Generic swipe down
-      trigger_gesture(GestureType::SwipeDown);
+      if (is_two_player) {
+        bool is_left = (point.x < SCREEN_WIDTH / 2);
+        if (is_left) {
+          trigger_gesture(GestureType::LongPressTopLeft);  // Big step +
+        } else {
+          trigger_gesture(GestureType::LongPressTopRight);
+        }
+      } else {
+        trigger_gesture(GestureType::LongPressTop);  // Big step +
+      }
       swipe_detected = true;
     }
   }
@@ -71,105 +89,79 @@ void lvgl_gesture_event_handler(lv_event_t *e)
   {
     if (long_press_active)
     {
-      // Ignore click after long press
       long_press_active = false;
       return;
     }
     if (!swipe_detected)
     {
-      if (point.y < SCREEN_HEIGHT / 2)
-      {
-        if (point.x < SCREEN_WIDTH / 2)
-        {
-          trigger_gesture(GestureType::TapTopLeft);
+      if (is_two_player) {
+        // 2-Spieler Modus: Links/Rechts unterscheiden
+        bool is_left = (point.x < SCREEN_WIDTH / 2);
+        bool is_top = (point.y < SCREEN_HEIGHT / 2);
+        
+        if (is_left && is_top) {
+          trigger_gesture(GestureType::TapTopLeft);  // Small +
+        } else if (is_left && !is_top) {
+          trigger_gesture(GestureType::TapBottomLeft);  // Small -
+        } else if (!is_left && is_top) {
+          trigger_gesture(GestureType::TapTopRight);  // Small +
+        } else {
+          trigger_gesture(GestureType::TapBottomRight);  // Small -
         }
-        else
-        {
-          trigger_gesture(GestureType::TapTopRight);
+      } else {
+        // 1-Spieler Modus
+        if (point.y < SCREEN_HEIGHT / 2) {
+          trigger_gesture(GestureType::TapTop);  // Small +
+        } else {
+          trigger_gesture(GestureType::TapBottom);  // Small -
         }
-        trigger_gesture(GestureType::TapTop);
-      }
-      else
-      {
-        if (point.x < SCREEN_WIDTH / 2)
-        {
-          trigger_gesture(GestureType::TapBottomLeft);
-        }
-        else
-        {
-          trigger_gesture(GestureType::TapBottomRight);
-        }
-        trigger_gesture(GestureType::TapBottom);
       }
     }
   }
   else if (code == LV_EVENT_LONG_PRESSED)
   {
     long_press_active = true;
-    // Determine if long press is in top or bottom half
-    if (point.y < SCREEN_HEIGHT / 2)
-    {
-      if (point.x < SCREEN_WIDTH / 2)
-      {
-        trigger_gesture(GestureType::LongPressTopLeft);
-      }
-      else
-      {
-        trigger_gesture(GestureType::LongPressTopRight);
-      }
-      trigger_gesture(GestureType::LongPressTop);
-    }
-    else
-    {
-      if (point.x < SCREEN_WIDTH / 2)
-      {
-        trigger_gesture(GestureType::LongPressBottomLeft);
-      }
-      else
-      {
-        trigger_gesture(GestureType::LongPressBottomRight);
-      }
-      trigger_gesture(GestureType::LongPressBottom);
+    
+    // Long-Press Mitte = Kontextmenü
+    int center_x = SCREEN_WIDTH / 2;
+    int center_y = SCREEN_HEIGHT / 2;
+    int dx = point.x - center_x;
+    int dy = point.y - center_y;
+    float dist = sqrtf(dx*dx + dy*dy);
+    
+    if (dist < 80) {
+      trigger_gesture(GestureType::LongPressCenter);
     }
   }
 }
 
-// Example: contextual menu quadrant selection (to be implemented)
 void handle_menu_quadrant(int x, int y)
 {
-  // Assume screen divided into 4 quadrants
   if (x < LV_HOR_RES / 2 && y < LV_VER_RES / 2)
   {
-    trigger_gesture(GestureType::MenuTL); // Top-left
+    trigger_gesture(GestureType::MenuTL);
   }
   else if (x >= LV_HOR_RES / 2 && y < LV_VER_RES / 2)
   {
-    trigger_gesture(GestureType::MenuTR); // Top-right
+    trigger_gesture(GestureType::MenuTR);
   }
   else if (x < LV_HOR_RES / 2 && y >= LV_VER_RES / 2)
   {
-    trigger_gesture(GestureType::MenuBL); // Bottom-left
+    trigger_gesture(GestureType::MenuBL);
   }
   else
   {
-    trigger_gesture(GestureType::MenuBR); // Bottom-right
+    trigger_gesture(GestureType::MenuBR);
   }
 }
 
-// Initialization function to attach event handler to LVGL objects
 void init_gesture_handling(lv_obj_t *root_obj)
 {
   lv_obj_add_event_cb(root_obj, lvgl_gesture_event_handler, LV_EVENT_ALL, NULL);
   lv_indev_set_long_press_time(lv_indev_get_act(), 500);
 }
 
-// Clear all registered gesture callbacks
 void clear_gesture_callbacks()
 {
   gesture_callbacks.clear();
 }
-// Usage example (to be called from your app):
-// register_gesture_callback(GestureType::TapTop, [](){ /* increment counter */ });
-// register_gesture_callback(GestureType::SwipeDown, [](){ /* decrement by 5 */ });
-// ...
-// init_gesture_handling(lv_scr_act());

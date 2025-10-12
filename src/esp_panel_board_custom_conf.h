@@ -174,8 +174,8 @@
 // Typically set to 400K
 #define ESP_PANEL_BOARD_TOUCH_I2C_SCL_PULLUP (1) // 0/1. Typically set to 1
 #define ESP_PANEL_BOARD_TOUCH_I2C_SDA_PULLUP (1) // 0/1. Typically set to 1
-#define ESP_PANEL_BOARD_TOUCH_I2C_IO_SCL (3)
-#define ESP_PANEL_BOARD_TOUCH_I2C_IO_SDA (1)
+#define ESP_PANEL_BOARD_TOUCH_I2C_IO_SCL (10)
+#define ESP_PANEL_BOARD_TOUCH_I2C_IO_SDA (11)
 #endif
 /* For panel */
 #define ESP_PANEL_BOARD_TOUCH_I2C_ADDRESS (0) // Typically set to 0 to use the default address.

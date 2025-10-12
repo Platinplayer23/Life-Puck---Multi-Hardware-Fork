@@ -21,6 +21,7 @@ enum class GestureType
   LongPressBottomLeft,
   LongPressTopRight,
   LongPressBottomRight,
+  LongPressCenter,
   MenuTL,
   MenuTR,
   MenuBL,

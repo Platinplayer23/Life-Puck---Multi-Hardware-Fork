@@ -2,7 +2,6 @@
 #include <lvgl.h>
 #include "ArduinoNvs.h"
 #include "gui_main.h"
-#include <esp_display_panel.hpp>
 #include "power_key/power_key.h"
 #include "constants/constants.h"
 #include "battery/battery_state.h"
@@ -11,140 +10,87 @@
 #include <helpers/event_grouper.h>
 #include "main.h"
 #include "state/state_store.h"
+#include "tcg_presets.h"
+#include "dice_coin.h"
 
-using namespace esp_panel::drivers;
-using namespace esp_panel::board;
+#include "I2C_Driver.h"
+#include "TCA9554PWR.h"
+#include "Display_ST77916.h"
+#include "Touch_CST816.h"
+#include "LVGL_Driver.h"
 
-// Limit tasks to run on the ESP32’s application CPU (CPU1)
-#if CONFIG_FREERTOS_UNICORE
-static const BaseType_t app_cpu = 0;
-#else
-static const BaseType_t app_cpu = 1;
-#endif
+extern uint8_t Touch_interrupts;
 
-esp_panel::board::Board *board = new esp_panel::board::Board();
-
-// Function to create a FreeRTOS task
-BaseType_t create_task(TaskFunction_t task_function, const char *task_name, uint32_t stack_size, void *param, UBaseType_t priority, TaskHandle_t *task_handle);
-
-/* LVGL draw into this buffer, 1/10 screen size usually works well. The size is in bytes */
-#define BUFFER_SIZE (SCREEN_HEIGHT * SCREEN_WIDTH * sizeof(uint16_t) / 10)
-
-/* Forward declaration for flush_cb */
-void flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map);
-
-/* Forward declaration for gui_task */
-void gui_task(void *pvParameters);
-
-// Global mode variable (should be updated by UI logic)
 PlayerMode life_counter_mode = PLAYER_MODE_ONE_PLAYER;
+bool is_two_player_mode = false;
+int player1_life = 20;
+int player2_life = 20;
+
+void update_player1_display() {
+}
+
+void update_player2_display() {
+}
 
 void setup()
 {
-  Serial.begin(115200);
-  Serial.println("[setup] Serial initialized");
+    Serial.begin(115200);
+    Serial.println("--- Starting Life-Puck with Custom Demo Drivers ---");
 
-  pinMode(PWR_KEY_Input_PIN, INPUT);
-  pinMode(PWR_Control_PIN, OUTPUT);
-  Serial.println("[setup] Initializing board");
-  board->init();
-  assert(board->begin());
-  board->getBacklight()->off();
-  battery_init();
-  create_task(gui_task, "gui_task", 16384, NULL, 1, NULL);
-  power_init();
+    I2C_Init();
+    TCA9554PWR_Init();
+    LCD_Init();
+    Backlight_Init();
+    Set_Backlight(100);
+
+    Lvgl_Init();
+
+    battery_init();
+    power_init();
+
+    // Presets initialisieren BEVOR ui_init()!
+    init_presets();
+    load_preset();
+    
+    TCGPreset preset = get_preset();
+    player1_life = preset.starting_life;
+    player2_life = preset.starting_life;
+
+    ui_init(); 
+    if (psramFound()) {
+    printf("PSRAM: %d bytes\n", ESP.getPsramSize());
+    heap_caps_malloc_extmem_enable(4096);  // Use PSRAM for large allocations
+  }
 }
 
 void loop()
 {
-  vTaskDelay(10 / portTICK_PERIOD_MS);
-  power_loop();
-  if (life_counter_mode == PLAYER_MODE_ONE_PLAYER) // Single player mode
-  {
-    life_counter_loop();
-  }
-  else if (life_counter_mode == PLAYER_MODE_TWO_PLAYER) // Two player mode
-  {
-    life_counter2p_loop();
-  }
-}
-
-BaseType_t create_task(TaskFunction_t task_function, const char *task_name, uint32_t stack_size, void *param, UBaseType_t priority, TaskHandle_t *task_handle)
-{
-  return xTaskCreatePinnedToCore(
-      task_function, // Function to be called
-      task_name,     // Name of task
-      stack_size,    // Stack size (bytes in ESP32)
-      param,         // Parameter to pass to function
-      priority,      // Task priority (0 to configMAX_PRIORITIES - 1)
-      task_handle,   // Task handle
-      app_cpu        // Run on core 1 (change to 0 for core 0)
-  );
-}
-
-void gui_task(void *pvParameters)
-{
-  Serial.println("Initializing LVGL");
-  lv_init();
-  lv_tick_set_cb(xTaskGetTickCount);
-
-  // Step 1: Create display object (LVGL 9.3)
-  lv_display_t *display = lv_display_create(SCREEN_WIDTH, SCREEN_HEIGHT);
-
-  // Step 2: Allocate display buffers
-  uint32_t *buf1 = (uint32_t *)malloc(BUFFER_SIZE / 2 * sizeof(uint32_t));
-  uint32_t *buf2 = (uint32_t *)malloc(BUFFER_SIZE / 2 * sizeof(uint32_t));
-  if (!buf1 || !buf2)
-  {
-    Serial.println("[LVGL] ERROR: Display buffer allocation failed!");
-    while (1)
-    {
-      vTaskDelay(20 / portTICK_PERIOD_MS);
+    Lvgl_Loop();
+    Touch_Loop();
+    power_loop();
+    
+    if (life_counter_mode == PLAYER_MODE_ONE_PLAYER) {
+        life_counter_loop();
+    } else if (life_counter_mode == PLAYER_MODE_TWO_PLAYER) {
+        life_counter2p_loop();
     }
-  }
-
-  // Step 3: Set display buffers and flush callback
-  lv_display_set_buffers(display, buf1, buf2, BUFFER_SIZE, LV_DISPLAY_RENDER_MODE_PARTIAL);
-  lv_display_set_flush_cb(display, flush_cb);
-
-  Serial.println("Creating UI");
-
-  ui_init();
-  init_touch();
-  // Force LVGL to draw at least one frame
-  lv_timer_handler();
-  vTaskDelay(50 / portTICK_PERIOD_MS); // Give hardware time to update
-
-  // Force another flush to ensure the frame is valid
-  lv_timer_handler();
-  vTaskDelay(10 / portTICK_PERIOD_MS);
-  board->getBacklight()->on();
-  board->getBacklight()->setBrightness(player_store.getInt(KEY_BRIGHTNESS, 100));
-  // Step 4: Main GUI loop (LVGL 9.3)
-  while (1)
-  {
-    uint32_t time_till_next = 5;
-
-    // Timer handler needs to be called periodically to handle the tasks of LVGL
-    time_till_next = lv_timer_handler(); // lv_task_handler() is aparently lvgl v8 only
-    // ui_tick();
-
-    if (time_till_next != LV_NO_TIMER_READY)           // Handle LV_NO_TIMER_READY (-1)
-      vTaskDelay(time_till_next / portTICK_PERIOD_MS); // Delay to avoid unnecessary polling
-  }
+    
+    if (Touch_interrupts) {
+        Touch_interrupts = 0;
+    }
+    
+    lv_timer_handler();
+    vTaskDelay(5 / portTICK_PERIOD_MS);
 }
 
-void flush_cb(lv_display_t *display, const lv_area_t *area, uint8_t *px_map)
-{
-  lv_draw_sw_rgb565_swap(
-      px_map, (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1));
-
-  const int offsetx1 = area->x1;
-  const int offsetx2 = area->x2;
-  const int offsety1 = area->y1;
-  const int offsety2 = area->y2;
-  int width = offsetx2 - offsetx1 + 1;
-  int height = offsety2 - offsety1 + 1;
-  board->getLCD()->drawBitmap(offsetx1, offsety1, width, height, px_map);
-  lv_display_flush_ready(display);
+void apply_preset_to_game(int preset_index) {
+    TCGPreset preset = get_preset();
+    
+    player1_life = preset.starting_life;
+    player2_life = preset.starting_life;
+    
+    update_player1_display();
+    if (is_two_player_mode) {
+        update_player2_display();
+    }
 }
