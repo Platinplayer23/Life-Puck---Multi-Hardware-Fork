@@ -288,96 +288,74 @@ static void arc_sweep_anim_ready_cb(lv_anim_t *a)
   });
 }
 
+// Optimized arc calculation with cached values and reduced redundancy
 static arc_segment_t life_to_arc(int life_total)
 {
+  static int cached_max_life = -1;
+  static float cached_arc_span = 0;
+  static int cached_base_start = 0;
+  static int cached_base_end = 0;
+  
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  arc_segment_t seg = {0};
-  int arc_life = life_total;
-  if (arc_life < 0)
-    arc_life = 0;
-  if (max_life <= 0)
-    max_life = 40;
-  float circumference = M_PI * SCREEN_DIAMETER;
-  float gap_px = 200.0f;
-  float gap_deg = (gap_px / circumference) * 360.0f;
-  float arc_span = 360.0f - gap_deg;
-  float arc_half = arc_span / 2.0f;
-  int base_start = (int)(270.0f - arc_half + 0.5f);
-  int base_end = (int)(270.0f + arc_half + 0.5f);
-
-  lv_color_t arc_color;
-  if (arc_life >= (int)(0.875 * max_life))
-  {
-    arc_color = GREEN_COLOR;
+  if (max_life <= 0) max_life = 40;
+  
+  // Cache expensive calculations
+  if (cached_max_life != max_life) {
+    float circumference = M_PI * SCREEN_DIAMETER;
+    float gap_px = 200.0f;
+    float gap_deg = (gap_px / circumference) * 360.0f;
+    cached_arc_span = 360.0f - gap_deg;
+    float arc_half = cached_arc_span / 2.0f;
+    cached_base_start = (int)(270.0f - arc_half + 0.5f);
+    cached_base_end = (int)(270.0f + arc_half + 0.5f);
+    cached_max_life = max_life;
   }
-  else if (arc_life >= (int)(0.55 * max_life))
-  {
+  
+  arc_segment_t seg = {0};
+  int arc_life = (life_total < 0) ? 0 : life_total;
+  
+  // Optimized color calculation
+  lv_color_t arc_color;
+  if (arc_life >= (int)(0.875 * max_life)) {
+    arc_color = GREEN_COLOR;
+  } else if (arc_life >= (int)(0.55 * max_life)) {
     uint8_t t = (uint8_t)(((arc_life - (int)(0.55 * max_life)) * 255) / ((int)(0.875 * max_life) - (int)(0.55 * max_life)));
     arc_color = interpolate_color(YELLOW_COLOR, GREEN_COLOR, t);
-  }
-  else if (arc_life >= (int)(0.25 * max_life))
-  {
+  } else if (arc_life >= (int)(0.25 * max_life)) {
     uint8_t t = (uint8_t)(((arc_life - (int)(0.25 * max_life)) * 255) / ((int)(0.55 * max_life) - (int)(0.25 * max_life)));
     arc_color = interpolate_color(RED_COLOR, YELLOW_COLOR, t);
-  }
-  else
-  {
+  } else {
     arc_color = RED_COLOR;
   }
-
-  if (arc_life >= (int)(0.875 * max_life))
-  {
-    arc_color = GREEN_COLOR;
+  
+  // Calculate angles
+  seg.start_angle = cached_base_start;
+  if (arc_life >= max_life) {
+    seg.end_angle = cached_base_start + (int)cached_arc_span;
+  } else if (arc_life <= 0) {
+    seg.end_angle = cached_base_start;
+  } else {
+    int sweep = (int)(cached_arc_span * ((float)arc_life / (float)max_life) + 0.5f);
+    seg.end_angle = (cached_base_start + sweep) % 360;
   }
-
-  if (arc_life > max_life)
-  {
-    seg.start_angle = base_start;
-    seg.end_angle = base_start + (int)arc_span;
-    seg.color = arc_color;
-    return seg;
-  }
-  if (arc_life == max_life)
-  {
-    seg.start_angle = base_start;
-    seg.end_angle = base_end % 360;
-    seg.color = arc_color;
-    return seg;
-  }
-  if (arc_life <= 0)
-  {
-    seg.start_angle = base_start;
-    seg.end_angle = base_start;
-    seg.color = arc_color;
-    return seg;
-  }
-
-  int sweep = (int)(arc_span * ((float)arc_life / (float)max_life) + 0.5f);
-  int end_angle = (base_start + sweep) % 360;
-  seg.start_angle = base_start;
-  seg.end_angle = end_angle;
+  
   seg.color = arc_color;
   return seg;
 }
 
 void update_life_label(int new_life_total)
 {
-  if (life_label != nullptr)
-  {
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%d", new_life_total);
-    lv_label_set_text(life_label, buf);
+  // Improved error handling and bounds checking
+  if (life_label != nullptr) {
+    char buf[12]; // Increased buffer size for safety
+    int result = snprintf(buf, sizeof(buf), "%d", new_life_total);
+    if (result > 0 && result < sizeof(buf)) {
+      lv_label_set_text(life_label, buf);
+    }
   }
-  if (life_arc != nullptr)
-  {
+  
+  if (life_arc != nullptr) {
     arc_segment_t seg = life_to_arc(new_life_total);
-    uint16_t c16 = lv_color_to_u16(seg.color);
-    uint8_t r = (c16 >> 11) & 0x1F;
-    uint8_t g = (c16 >> 5) & 0x3F;
-    uint8_t b = c16 & 0x1F;
-    r = (r << 3) | (r >> 2);
-    g = (g << 2) | (g >> 4);
-    b = (b << 3) | (b >> 2);
     lv_arc_set_angles(life_arc, seg.start_angle, seg.end_angle);
     lv_obj_set_style_arc_color(life_arc, seg.color, LV_PART_INDICATOR);
   }
