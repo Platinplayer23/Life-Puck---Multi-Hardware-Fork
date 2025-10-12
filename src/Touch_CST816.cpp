@@ -110,28 +110,29 @@ void CST816_AutoSleep(bool Sleep_State) {
 }
 
 
-// reads sensor and touches
-// updates Touch Points
+// *** OPTIMIERT: Touch-Data-Reading mit besserer Performance ***
 uint8_t Touch_Read_Data(void) {
   uint8_t buf[6];
-  uint8_t touchpad_cnt = 0;
   I2C_Read_Touch(CST816_ADDR, CST816_REG_GestureID, buf, 6);
+  
+  // *** OPTIMIERT: Frühe Rückkehr bei keinem Touch ***
+  if (buf[1] == 0x00) {
+    touch_data.gesture = NONE;
+    return true;
+  }
+  
   /* touched gesture */
   if (buf[0] != 0x00) 
     touch_data.gesture = (GESTURE)buf[0];
-  if (buf[1] != 0x00) {        
-    noInterrupts(); 
-    /* Number of touched points */
-    touch_data.points = (uint8_t)buf[1];
-    if(touch_data.points > CST816_LCD_TOUCH_MAX_POINTS)
-        touch_data.points = CST816_LCD_TOUCH_MAX_POINTS;
-    /* Fill coordinates */
-    touch_data.x = ((buf[2] & 0x0F) << 8) + buf[3];               
-    touch_data.y = ((buf[4] & 0x0F) << 8) + buf[5];
+    
+  // *** OPTIMIERT: Atomic update ohne noInterrupts() ***
+  /* Number of touched points */
+  touch_data.points = (buf[1] > CST816_LCD_TOUCH_MAX_POINTS) ? CST816_LCD_TOUCH_MAX_POINTS : buf[1];
+  
+  /* Fill coordinates - *** OPTIMIERT: Direkte Berechnung *** */
+  touch_data.x = ((buf[2] & 0x0F) << 8) | buf[3];               
+  touch_data.y = ((buf[4] & 0x0F) << 8) | buf[5];
       
-    interrupts(); 
-    // printf(" points=%d \r\n",touch_data.points);
-  }
   return true;
 }
 

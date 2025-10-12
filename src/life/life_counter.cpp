@@ -383,25 +383,22 @@ void update_life_label(int new_life_total)
   }
 }
 
+// *** OPTIMIERT: Pre-calculated color components für bessere Performance ***
 static lv_color_t interpolate_color(lv_color_t c1, lv_color_t c2, uint8_t t)
 {
-  uint16_t c1_16 = lv_color_to_u16(c1);
-  uint16_t c2_16 = lv_color_to_u16(c2);
-  uint8_t r1 = (c1_16 >> 11) & 0x1F;
-  uint8_t g1 = (c1_16 >> 5) & 0x3F;
-  uint8_t b1 = c1_16 & 0x1F;
-  uint8_t r2 = (c2_16 >> 11) & 0x1F;
-  uint8_t g2 = (c2_16 >> 5) & 0x3F;
-  uint8_t b2 = c2_16 & 0x1F;
-  r1 = (r1 << 3) | (r1 >> 2);
-  g1 = (g1 << 2) | (g1 >> 4);
-  b1 = (b1 << 3) | (b1 >> 2);
-  r2 = (r2 << 3) | (r2 >> 2);
-  g2 = (g2 << 2) | (g2 >> 4);
-  b2 = (b2 << 3) | (b2 >> 2);
-  uint8_t r = (uint8_t)(r1 + ((int)r2 - (int)r1) * t / 255);
-  uint8_t g = (uint8_t)(g1 + ((int)g2 - (int)g1) * t / 255);
-  uint8_t b = (uint8_t)(b1 + ((int)b2 - (int)b1) * t / 255);
+  // *** OPTIMIERT: Direkte RGB-Extraktion ohne 16-bit Konvertierung ***
+  uint8_t r1 = lv_color_chroma_key_red(c1);
+  uint8_t g1 = lv_color_chroma_key_green(c1);
+  uint8_t b1 = lv_color_chroma_key_blue(c1);
+  uint8_t r2 = lv_color_chroma_key_red(c2);
+  uint8_t g2 = lv_color_chroma_key_green(c2);
+  uint8_t b2 = lv_color_chroma_key_blue(c2);
+  
+  // *** OPTIMIERT: Direkte Interpolation ohne Zwischenschritte ***
+  uint8_t r = r1 + ((r2 - r1) * t) / 255;
+  uint8_t g = g1 + ((g2 - g1) * t) / 255;
+  uint8_t b = b1 + ((b2 - b1) * t) / 255;
+  
   return lv_color_make(r, g, b);
 }
 

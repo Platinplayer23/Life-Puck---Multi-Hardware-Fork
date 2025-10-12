@@ -3,10 +3,10 @@
 static lv_display_t *display;
 static lv_indev_t *indev;
 
-// *** OPTIMIERT: GRÖßERER BUFFER (von 32 auf 64 Zeilen) ***
-// Use DMA capable memory for the buffer
-static lv_color_t *buf1 = (lv_color_t *)heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_DMA);
-static lv_color_t *buf2 = (lv_color_t *)heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_DMA);
+// *** OPTIMIERT: PSRAM für größere Buffer nutzen ***
+// Use PSRAM for larger buffers to free up internal RAM
+static lv_color_t *buf1 = (lv_color_t *)heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
+static lv_color_t *buf2 = (lv_color_t *)heap_caps_malloc(LVGL_BUF_LEN * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
 
 // LVGL v9 flush callback
 void Lvgl_Display_Flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
@@ -14,28 +14,28 @@ void Lvgl_Display_Flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
     lv_display_flush_ready(disp);
 }
 
-// LVGL v9 touchpad read callback with SCALING CORRECTION
+// LVGL v9 touchpad read callback with OPTIMIZED SCALING
 void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data) {
     Touch_Read_Data();
     if (touch_data.points != 0) {
-        // TOUCH SCALING CORRECTION
-        float scale_x = 0.85f;  // Teste: 0.95, 1.0, 1.05
-        float scale_y = 1.0f;  // Teste: 0.95, 1.0, 1.05
-        
-        int center_x = LCD_WIDTH / 2;
-        int center_y = LCD_HEIGHT / 2;
+        // *** OPTIMIERT: Pre-calculated constants für bessere Performance ***
+        static const float scale_x = 0.85f;
+        static const float scale_y = 1.0f;
+        static const int center_x = LCD_WIDTH / 2;
+        static const int center_y = LCD_HEIGHT / 2;
+        static const int max_x = LCD_WIDTH - 1;
+        static const int max_y = LCD_HEIGHT - 1;
         
         int dx = touch_data.x - center_x;
         int dy = touch_data.y - center_y;
         
+        // *** OPTIMIERT: Direkte Berechnung ohne Zwischenschritte ***
         int corrected_x = center_x + (int)(dx * scale_x);
         int corrected_y = center_y + (int)(dy * scale_y);
         
-        // Clamp to screen bounds
-        if (corrected_x < 0) corrected_x = 0;
-        if (corrected_y < 0) corrected_y = 0;
-        if (corrected_x >= LCD_WIDTH) corrected_x = LCD_WIDTH - 1;
-        if (corrected_y >= LCD_HEIGHT) corrected_y = LCD_HEIGHT - 1;
+        // *** OPTIMIERT: Clamp mit ternären Operatoren ***
+        corrected_x = (corrected_x < 0) ? 0 : (corrected_x > max_x) ? max_x : corrected_x;
+        corrected_y = (corrected_y < 0) ? 0 : (corrected_y > max_y) ? max_y : corrected_y;
         
         data->point.x = corrected_x;
         data->point.y = corrected_y;

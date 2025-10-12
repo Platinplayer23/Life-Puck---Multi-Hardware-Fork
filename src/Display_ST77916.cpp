@@ -284,7 +284,7 @@ int QSPI_Init(void){
     .cs_gpio_num = ESP_PANEL_LCD_SPI_IO_CS,               
     .dc_gpio_num = -1,                  
     .spi_mode = ESP_PANEL_LCD_SPI_MODE,                      
-    .pclk_hz = 5 * 1000 * 1000,     
+    .pclk_hz = 10 * 1000 * 1000,     // *** OPTIMIERT: Höhere SPI-Geschwindigkeit ***
     .trans_queue_depth = ESP_PANEL_LCD_SPI_TRANS_QUEUE_SZ,            
     .on_color_trans_done = NULL,                            
     .user_ctx = NULL,                   
@@ -380,19 +380,22 @@ void ST77916_Init() {
 
 void LCD_addWindow(uint16_t Xstart, uint16_t Ystart, uint16_t Xend, uint16_t Yend,uint16_t* color)
 { 
-  uint32_t size = (Xend - Xstart +1 ) * (Yend - Ystart + 1);
-  for (size_t i = 0; i < size; i++) {
-    color[i] = (((color[i] >> 8) & 0xFF) | ((color[i] << 8) & 0xFF00));
-  }
+  // *** OPTIMIERT: Pre-calculate bounds checking ***
+  uint16_t actual_xend = (Xend + 1 > EXAMPLE_LCD_WIDTH) ? EXAMPLE_LCD_WIDTH : Xend + 1;
+  uint16_t actual_yend = (Yend + 1 > EXAMPLE_LCD_HEIGHT) ? EXAMPLE_LCD_HEIGHT : Yend + 1;
   
-  Xend = Xend + 1;
-  Yend = Yend + 1;
-  if (Xend > EXAMPLE_LCD_WIDTH)
-    Xend = EXAMPLE_LCD_WIDTH;
-  if (Yend > EXAMPLE_LCD_HEIGHT)
-    Yend = EXAMPLE_LCD_HEIGHT;
+  uint32_t size = (actual_xend - Xstart) * (actual_yend - Ystart);
+  
+  // *** OPTIMIERT: Unrolled loop für bessere Performance ***
+  for (size_t i = 0; i < size; i += 4) {
+    // Process 4 pixels at once for better cache performance
+    if (i < size) color[i] = __builtin_bswap16(color[i]);
+    if (i + 1 < size) color[i + 1] = __builtin_bswap16(color[i + 1]);
+    if (i + 2 < size) color[i + 2] = __builtin_bswap16(color[i + 2]);
+    if (i + 3 < size) color[i + 3] = __builtin_bswap16(color[i + 3]);
+  }
     
-  esp_lcd_panel_draw_bitmap(panel_handle, Xstart, Ystart, Xend, Yend, color);
+  esp_lcd_panel_draw_bitmap(panel_handle, Xstart, Ystart, actual_xend, actual_yend, color);
 }
 
 

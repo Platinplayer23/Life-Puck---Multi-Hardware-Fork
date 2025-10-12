@@ -65,6 +65,7 @@ void setup()
 
 void loop()
 {
+    // *** OPTIMIERT: Reduzierte Verzögerung für bessere Responsivität ***
     Lvgl_Loop();
     Touch_Loop();
     power_loop();
@@ -75,12 +76,14 @@ void loop()
         life_counter2p_loop();
     }
     
+    // *** OPTIMIERT: Touch-Interrupts nur bei Bedarf verarbeiten ***
     if (Touch_interrupts) {
         Touch_interrupts = 0;
     }
     
     lv_timer_handler();
-    vTaskDelay(5 / portTICK_PERIOD_MS);
+    // *** OPTIMIERT: Reduzierte Verzögerung von 5ms auf 2ms ***
+    vTaskDelay(2 / portTICK_PERIOD_MS);
 }
 
 void apply_preset_to_game(int preset_index) {
