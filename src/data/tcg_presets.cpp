@@ -7,8 +7,15 @@ int TCG_PRESET_COUNT = 10;
 int current_preset_index = 0;
 
 // ============================================
-// DEFAULT PRESETS - Nur beim ERSTEN Start
+// DEFAULT PRESETS - Only on FIRST startup
 // ============================================
+/**
+ * @brief Initialize default TCG game presets
+ * 
+ * Sets up the default configurations for popular trading card games
+ * including Magic: The Gathering, Pokemon, Yu-Gi-Oh!, and others.
+ * These serve as factory defaults and fallback values.
+ */
 void init_default_presets() {
     // ---- SLOT 0: MTG Standard ----
     strncpy(TCG_PRESETS[0].name, "MTG Standard", sizeof(TCG_PRESETS[0].name) - 1);
@@ -72,13 +79,19 @@ void init_default_presets() {
 }
 
 // ============================================
-// INIT: Lädt aus Storage ODER Defaults
+// INIT: Load from storage OR use defaults
 // ============================================
+/**
+ * @brief Initialize preset system
+ * 
+ * Loads presets from persistent storage if available, otherwise
+ * initializes with factory defaults. This is called during system startup.
+ */
 void init_presets() {
-    // Erst Defaults laden (Fallback)
+    // First load defaults (fallback)
     init_default_presets();
     
-    // Dann versuchen aus Storage zu überschreiben
+    // Then try to overwrite from storage
     for (int i = 0; i < 10; i++) {
         char key_name[32], key_life[32], key_small[32], key_large[32];
         
@@ -90,7 +103,7 @@ void init_presets() {
         String stored_name = player_store.getString(key_name, "");
         
         if (stored_name.length() > 0) {
-            // Gespeicherter Preset vorhanden - überschreibe Default
+            // Stored preset found - overwrite default
             strncpy(TCG_PRESETS[i].name, stored_name.c_str(), sizeof(TCG_PRESETS[i].name) - 1);
             TCG_PRESETS[i].name[sizeof(TCG_PRESETS[i].name) - 1] = '\0';
             
@@ -98,13 +111,19 @@ void init_presets() {
             TCG_PRESETS[i].small_step = player_store.getInt(key_small, TCG_PRESETS[i].small_step);
             TCG_PRESETS[i].large_step = player_store.getInt(key_large, TCG_PRESETS[i].large_step);
         }
-        // Wenn NICHT gespeichert, bleibt der Default aus init_default_presets()
+        // If NOT stored, keep the default from init_default_presets()
     }
 }
 
 // ============================================
-// AB HIER NICHTS ÄNDERN
+// PRESET ACCESS FUNCTIONS - DO NOT MODIFY
 // ============================================
+/**
+ * @brief Load active preset index from storage
+ * 
+ * Retrieves the currently selected preset index from persistent storage.
+ * Defaults to preset 0 if no valid index is found.
+ */
 void load_preset() {
     current_preset_index = player_store.getInt("preset_idx", 0);
     if (current_preset_index < 0 || current_preset_index >= TCG_PRESET_COUNT) {
@@ -112,6 +131,13 @@ void load_preset() {
     }
 }
 
+/**
+ * @brief Save active preset index to storage
+ * 
+ * @param index Index of the preset to make active (0-9)
+ * 
+ * Stores the preset index in persistent storage if valid.
+ */
 void save_preset(int index) {
     if (index >= 0 && index < TCG_PRESET_COUNT) {
         current_preset_index = index;
@@ -119,6 +145,13 @@ void save_preset(int index) {
     }
 }
 
+/**
+ * @brief Get the currently active preset
+ * 
+ * @return TCGPreset The current preset configuration
+ * 
+ * Returns the preset at the current index, or preset 0 as fallback.
+ */
 TCGPreset get_preset() {
     if (current_preset_index < 0 || current_preset_index >= TCG_PRESET_COUNT) {
         return TCG_PRESETS[0];

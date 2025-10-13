@@ -16,7 +16,7 @@
 // ============================================
 // Hardware
 // ============================================
-#include "hardware/display/Display_ST77916.h"
+#include "hardware/display/display_st77916.h"
 
 // ============================================
 // UI Screens
@@ -40,7 +40,16 @@ struct ChangeData
     lv_obj_t *val_current;
 };
 
-int brightness = player_store.getInt(KEY_BRIGHTNESS, 100); // Default to 100% if not set
+// Global brightness value - loaded dynamically on first use
+int brightness = -1;  // -1 means not loaded yet
+
+// Load brightness from NVS on first access  
+static void ensure_brightness_loaded() {
+    if (brightness == -1) {
+        brightness = player_store.getInt(KEY_BRIGHTNESS, 100); // Load from NVS or default to 100%
+        printf("[Brightness] Loaded from NVS: %d%%\n", brightness);
+    }
+}
 
 // This function is now much simpler
 static void set_brightness()
@@ -51,6 +60,7 @@ static void set_brightness()
 
 static void brightness_up_event_handler(lv_event_t *e)
 {
+    ensure_brightness_loaded(); // Make sure brightness is loaded from NVS
     if (brightness < 100)
     {
         brightness += 5;
@@ -64,6 +74,7 @@ static void brightness_up_event_handler(lv_event_t *e)
 
 static void brightness_down_event_handler(lv_event_t *e)
 {
+    ensure_brightness_loaded(); // Make sure brightness is loaded from NVS
     if (brightness > 5)
     {
         brightness -= 5;
@@ -86,6 +97,7 @@ void teardownBrightnessOverlay()
 
 void renderBrightnessOverlay()
 {
+    ensure_brightness_loaded(); // Make sure brightness is loaded from NVS
 
     teardownBrightnessOverlay();
     brightness_control = lv_obj_create(lv_scr_act());

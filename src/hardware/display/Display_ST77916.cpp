@@ -1,4 +1,4 @@
-#include "Display_ST77916.h"
+#include "display_st77916.h"
 #include "board_config.h"
 #include <stdlib.h>
 #include <string.h>
@@ -284,8 +284,8 @@ int QSPI_Init(void){
     .cs_gpio_num = ESP_PANEL_LCD_SPI_IO_CS,               
     .dc_gpio_num = -1,                  
     .spi_mode = ESP_PANEL_LCD_SPI_MODE,                      
-    .pclk_hz = 5 * 1000 * 1000,     
-    .trans_queue_depth = ESP_PANEL_LCD_SPI_TRANS_QUEUE_SZ,            
+    .pclk_hz = 5 * 1000 * 1000,     // *** ORIGINAL 5MHz - EXACTLY as in working version ***
+    .trans_queue_depth = 10,  // *** SAFE default value - reduced from 20 ***            
     .on_color_trans_done = NULL,                            
     .user_ctx = NULL,                   
     .lcd_cmd_bits = ESP_PANEL_LCD_SPI_CMD_BITS,                 

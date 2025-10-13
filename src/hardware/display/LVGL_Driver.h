@@ -15,8 +15,8 @@
 // ============================================
 // Hardware Drivers (same level/nearby)
 // ============================================
-#include "Display_ST77916.h"
-#include "Touch_CST816.h"
+#include "display_st77916.h"
+#include "../touch/touch_cst816.h"
 
 
 #ifndef LCD_WIDTH
@@ -40,3 +40,13 @@ void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data);
 
 void Lvgl_Init(void);
 void Lvgl_Loop(void);
+
+// *** TOUCH CALIBRATION GLOBALS ***
+// External access to touch calibration values for NVS loading
+extern float g_touch_scale_x;
+extern float g_touch_scale_y;
+extern float g_touch_offset_x;  // NEW: Offset support
+extern float g_touch_offset_y;  // NEW: Offset support
+
+// *** TOUCH CALIBRATION API ***
+void updateTouchCalibration(float scale_x, float scale_y, float offset_x, float offset_y);

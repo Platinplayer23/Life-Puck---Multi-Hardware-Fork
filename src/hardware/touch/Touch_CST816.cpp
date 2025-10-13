@@ -1,4 +1,4 @@
-#include "Touch_CST816.h"
+#include "touch_cst816.h"
 #include "board_config.h"
 
 

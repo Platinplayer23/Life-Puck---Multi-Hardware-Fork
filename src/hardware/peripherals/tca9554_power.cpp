@@ -1,4 +1,4 @@
-#include "TCA9554PWR.h"
+#include "tca9554_power.h"
 
 /*****************************************************  Operation register REG   ****************************************************/   
 uint8_t Read_REG(uint8_t REG)                             // Read the value of the TCA9554PWR register REG

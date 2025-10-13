@@ -1,9 +1,12 @@
-
+/**
+ * @file state_manager.cpp
+ * @brief Implementation of persistent state storage using ESP32 NVS
+ */
 
 #include "core/state_manager.h"
 #include <ArduinoNvs.h>
 
-// Global instance definition
+/// Global instance for player/game state storage
 StateStore player_store("player");
 
 // StateStore method implementations

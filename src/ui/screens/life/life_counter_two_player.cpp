@@ -1,7 +1,7 @@
 // ============================================
 // Own Header (first!)
 // ============================================
-#include "life_counter2P.h"
+#include "life_counter_two_player.h"
 
 // ============================================
 // System & Framework Headers
@@ -34,6 +34,11 @@
 // ============================================
 #include "data/constants.h"
 
+// ============================================
+// Hardware/Storage
+// ============================================
+#include <ArduinoNvs.h>
+
 
 // --- Two Player Life Counter GUI State ---
 #define ARC_GAP_DEGREES 60
@@ -58,6 +63,11 @@ void decrement_life(int player, int value);
 void reset_life(int player);
 void queue_life_change_2p(int player, int value);
 
+// *** PERSISTENT LIFE STORAGE (from life_counter.cpp) ***
+extern void saveLifeToNVS(int life_value, int player);
+extern int loadLifeFromNVS(int player);
+extern void clearSavedLife();
+
 // Suppress tap after gesture
 static bool gesture_active = false;
 
@@ -75,9 +85,14 @@ void init_life_counter_2P()
 {
   is_initializing_2p = true;  // Set flag to indicate initialization is active
   teardown_life_counter_2P(); // Clean up any previous state
+  
+  // *** AUTO-LOAD: Load saved life for both players ***
+  int saved_life_p1 = loadLifeFromNVS(1);  // Player 1
+  int saved_life_p2 = loadLifeFromNVS(2);  // Player 2
+  event_grouper_p1.resetHistory(saved_life_p1);
+  event_grouper_p2.resetHistory(saved_life_p2);
+  
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  event_grouper_p1.resetHistory(max_life);
-  event_grouper_p2.resetHistory(max_life);
   if (!life_counter_container_2p)
   {
     life_counter_container_2p = lv_obj_create(lv_scr_act());
@@ -185,8 +200,8 @@ void init_life_counter_2P()
     lv_anim_init(&anim1);
     lv_anim_set_var(&anim1, NULL);
     lv_anim_set_exec_cb(&anim1, arc_sweep_anim_cb_p1);
-    lv_anim_set_values(&anim1, 0, max_life);
-    lv_anim_set_time(&anim1, 1500);
+    lv_anim_set_values(&anim1, 0, SMOOTH_ARC_STEPS);  // Smooth animation with 1000 steps
+    lv_anim_set_time(&anim1, ARC_ANIMATION_DURATION);  // Faster, responsive animation
     lv_anim_set_delay(&anim1, 0);
     lv_anim_set_ready_cb(&anim1, arc_sweep_anim_ready_cb);
     lv_anim_start(&anim1);
@@ -200,8 +215,8 @@ void init_life_counter_2P()
     lv_anim_init(&anim2);
     lv_anim_set_var(&anim2, NULL);
     lv_anim_set_exec_cb(&anim2, arc_sweep_anim_cb_p2);
-    lv_anim_set_values(&anim2, 0, max_life);
-    lv_anim_set_time(&anim2, 1500);
+    lv_anim_set_values(&anim2, 0, SMOOTH_ARC_STEPS);  // Smooth animation with 1000 steps
+    lv_anim_set_time(&anim2, ARC_ANIMATION_DURATION);  // Faster, responsive animation
     lv_anim_set_delay(&anim2, 0);
     lv_anim_set_ready_cb(&anim2, arc_sweep_anim_ready_cb);
     lv_anim_start(&anim2);
@@ -286,42 +301,53 @@ void reset_life_2p()
   update_life_label(1, life_value);
   event_grouper_p2.resetHistory(life_value);
   update_life_label(2, life_value);
+  
+  // *** AUTO-SAVE: Clear saved data when user resets (Two-Player) ***
+  clearSavedLife();
 }
 
-// Animation callback for arc (Player 1)
+// *** SMOOTH ARC ANIMATION CALLBACK (Player 1) ***
+// Uses high-resolution interpolation for smooth movement even with low life values
 static void arc_sweep_anim_cb_p1(void *var, int32_t v)
 {
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  if (v > max_life)
-    v = max_life;
+  // v goes from 0 to SMOOTH_ARC_STEPS (1000) for smooth interpolation
+  int interpolated_life = (v * max_life) / SMOOTH_ARC_STEPS;
+  if (interpolated_life > max_life)
+    interpolated_life = max_life;
+  
   int arc_start = 90 + ARC_GAP_DEGREES / 2;
   int arc_end = 270;
   int arc_span = arc_end - arc_start;
-  int sweep = (int)(arc_span * ((float)v / (float)max_life) + 0.5f);
+  int sweep = (int)(arc_span * ((float)interpolated_life / (float)max_life) + 0.5f);
   int end_angle = arc_start + sweep;
   if (end_angle > arc_end)
     end_angle = arc_end;
   lv_arc_set_angles(life_arc_p1, arc_start, end_angle);
-  update_life_label(1, v);
+  update_life_label(1, interpolated_life);
 }
 
-// Animation callback for arc (Player 2)
+// *** SMOOTH ARC ANIMATION CALLBACK (Player 2) ***
+// Uses high-resolution interpolation for smooth movement even with low life values
 static void arc_sweep_anim_cb_p2(void *var, int32_t v)
 {
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  if (v > max_life)
-    v = max_life;
+  // v goes from 0 to SMOOTH_ARC_STEPS (1000) for smooth interpolation
+  int interpolated_life = (v * max_life) / SMOOTH_ARC_STEPS;
+  if (interpolated_life > max_life)
+    interpolated_life = max_life;
+  
   int arc_start = 270;
   int arc_end = 90 - ARC_GAP_DEGREES / 2;
   int arc_span = (arc_end - arc_start + 360) % 360;
-  int sweep = (int)(arc_span * ((float)v / (float)max_life) + 0.5f);
+  int sweep = (int)(arc_span * ((float)interpolated_life / (float)max_life) + 0.5f);
   if (arc_span == 0)
     arc_span = 360;
   if (sweep > arc_span)
     sweep = arc_span;
   int anim_end = (arc_end - sweep + 360) % 360;
   lv_arc_set_angles(life_arc_p2, anim_end, arc_end);
-  update_life_label(2, v);
+  update_life_label(2, interpolated_life);
 }
 
 // Animation ready callback
@@ -349,7 +375,7 @@ static void arc_sweep_anim_ready_cb(lv_anim_t *a)
                             { if(getCurrentMenu() == MENU_NONE)
                                 renderMenu(MENU_CONTEXTUAL); });
   
-  // NEU: Long-Press Center für Menü
+  // NEW: Long-Press Center for Menu
   register_gesture_callback(GestureType::LongPressCenter, []() {
       if (getCurrentMenu() == MENU_NONE) {
           renderMenu(MENU_CONTEXTUAL);
@@ -516,5 +542,9 @@ void queue_life_change_2p(int player, int value)
         lv_obj_add_flag((lv_obj_t *)fade_out_anim->var, LV_OBJ_FLAG_HIDDEN);
       } });
   }
-  grouper->handleChange(player, value, get_elapsed_seconds(), NULL);
+  grouper->handleChange(player, value, get_elapsed_seconds(), [](const LifeHistoryEvent &evt) {
+    // *** AUTO-SAVE: Save life to NVS whenever a change is committed (Two-Player) ***
+    saveLifeToNVS(evt.life_total, evt.player_id);
+    printf("[AutoSave-2P] Life saved: %d for player %d\n", evt.life_total, evt.player_id);
+  });
 }

@@ -1,6 +1,6 @@
 #pragma once
-#include "../peripherals/TCA9554PWR.h"
-#include "../touch/Touch_CST816.h"
+#include "../peripherals/tca9554_power.h"
+#include "../touch/touch_cst816.h"
 
 
 #define LCD_Backlight_PIN   5
@@ -34,7 +34,7 @@
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL       (1)
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 
-#define ESP_PANEL_HOST_SPI_MAX_TRANSFER_SIZE   (2048)
+#define ESP_PANEL_HOST_SPI_MAX_TRANSFER_SIZE   (2048)  // *** SAFE default value ***
 
 extern uint8_t LCD_Backlight;
 

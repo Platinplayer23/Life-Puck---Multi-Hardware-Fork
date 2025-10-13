@@ -6,6 +6,10 @@
 #define SCREEN_DIAMETER SCREEN_WIDTH
 #define ARC_WIDTH 8
 
+// *** SMOOTH ANIMATION CONSTANTS ***
+#define SMOOTH_ARC_STEPS 1000        // High-resolution animation steps for smooth arcs
+#define ARC_ANIMATION_DURATION 300   // Fast, responsive 300ms animations
+
 typedef struct
 {
   int start_angle;
@@ -37,7 +41,8 @@ enum MenuState
   MENU_TCG, 
   MENU_DICE_LIST,
   MENU_PRESET_LIST,
-  MENU_PRESET_EDITOR    // NEU: Preset-Editor
+  MENU_PRESET_EDITOR,    // Preset Editor
+  MENU_TOUCH_CALIBRATION // NEW: Touch Calibration
 };
 
 enum ContextualQuadrant
@@ -50,7 +55,6 @@ enum ContextualQuadrant
 };
 
 // Color Constants
-#include "lvgl.h"
 #define GREEN_COLOR lv_color_hex(0x00e31f)
 #define YELLOW_COLOR lv_color_hex(0xebf700)
 #define RED_COLOR lv_color_hex(0xe80000)
@@ -71,7 +75,12 @@ enum ContextualQuadrant
 #define KEY_LIFE_STEP_SMALL "life_step_small"
 #define KEY_LIFE_STEP_LARGE "life_step_large"
 #define KEY_SHOW_TIMER "show_timer"
-#define KEY_SWIPE_TO_CLOSE "swipe_close"  // NEU
+#define KEY_SWIPE_TO_CLOSE "swipe_close"  // NEW
+
+// *** PERSISTENT LIFE VALUES ***
+#define KEY_SAVED_LIFE_P1 "saved_life_p1"    // Single player or Player 1 life
+#define KEY_SAVED_LIFE_P2 "saved_life_p2"    // Player 2 life (two-player mode)
+#define KEY_LIFE_SAVE_VALID "life_save_valid" // Flag: 1 if saved values are valid
 
 // define for life increment levels small and large
 #define DEFAULT_LIFE_INCREMENT_SMALL 1

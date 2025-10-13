@@ -1,7 +1,30 @@
-#include "LVGL_Driver.h"
+#include "lvgl_driver.h"
 
 static lv_display_t *display;
 static lv_indev_t *indev;
+
+// *** TOUCH CALIBRATION GLOBALS ***
+// Global touch calibration values that can be updated from NVS
+float g_touch_scale_x = 0.85f;  // Default value from original working calibration
+float g_touch_scale_y = 1.0f;   // Default value from original working calibration
+float g_touch_offset_x = 0.0f;  // NEW: X offset for calibration  
+float g_touch_offset_y = 0.0f;  // NEW: Y offset for calibration
+
+/**
+ * @brief Update global touch calibration values (including offsets)
+ * @param scale_x X scaling factor 
+ * @param scale_y Y scaling factor
+ * @param offset_x X offset in pixels
+ * @param offset_y Y offset in pixels  
+ */
+void updateTouchCalibration(float scale_x, float scale_y, float offset_x, float offset_y) {
+    g_touch_scale_x = scale_x;
+    g_touch_scale_y = scale_y;
+    g_touch_offset_x = offset_x;
+    g_touch_offset_y = offset_y;
+    printf("[TouchCal] Updated: scale(%.3f,%.3f) offset(%.3f,%.3f)\n", 
+           scale_x, scale_y, offset_x, offset_y);
+}
 
 // *** OPTIMIERT: GRÖßERER BUFFER (von 32 auf 64 Zeilen) ***
 // Use DMA capable memory for the buffer
@@ -18,18 +41,25 @@ void Lvgl_Display_Flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
 void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data) {
     Touch_Read_Data();
     if (touch_data.points != 0) {
-        // TOUCH SCALING CORRECTION
-        float scale_x = 0.85f;  // Teste: 0.95, 1.0, 1.05
-        float scale_y = 1.0f;  // Teste: 0.95, 1.0, 1.05
+        // TOUCH CALIBRATION - Apply both scaling AND offset
+        float scale_x = g_touch_scale_x;   // From calibration or default 0.85f
+        float scale_y = g_touch_scale_y;   // From calibration or default 1.0f
+        float offset_x = g_touch_offset_x; // From calibration or default 0.0f
+        float offset_y = g_touch_offset_y; // From calibration or default 0.0f
         
+        // Apply scaling first (around center)
         int center_x = LCD_WIDTH / 2;
         int center_y = LCD_HEIGHT / 2;
         
         int dx = touch_data.x - center_x;
         int dy = touch_data.y - center_y;
         
-        int corrected_x = center_x + (int)(dx * scale_x);
-        int corrected_y = center_y + (int)(dy * scale_y);
+        int scaled_x = center_x + (int)(dx * scale_x);
+        int scaled_y = center_y + (int)(dy * scale_y);
+        
+        // Then apply offset correction
+        int corrected_x = scaled_x + (int)offset_x;
+        int corrected_y = scaled_y + (int)offset_y;
         
         // Clamp to screen bounds
         if (corrected_x < 0) corrected_x = 0;

@@ -20,5 +20,10 @@ void clear_amp();
 void life_counter_loop();
 void teardown_life_counter();
 
+// *** PERSISTENT LIFE STORAGE ***
+void saveLifeToNVS(int life_value, int player = 1);
+int loadLifeFromNVS(int player = 1);
+void clearSavedLife();
+
 // Extern so we can access from main.cpp
 extern EventGrouper event_grouper;

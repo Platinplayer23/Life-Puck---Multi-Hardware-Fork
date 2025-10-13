@@ -126,7 +126,7 @@ void render_timer(lv_obj_t *parent)
   lv_obj_set_size(timer_container, 130, 45);
   lv_obj_set_style_bg_opa(timer_container, LV_OPA_TRANSP, 0);
   
-  // Weißer Rahmen
+  // White border
   lv_obj_set_style_border_width(timer_container, 2, 0);
   lv_obj_set_style_border_color(timer_container, lv_color_white(), 0);
   lv_obj_set_style_radius(timer_container, 10, 0);

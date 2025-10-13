@@ -18,7 +18,7 @@
 // ============================================
 #include "ui/screens/menu/menu.h"
 #include "ui/screens/life/life_counter.h"
-#include "ui/screens/life/life_counter2P.h"
+#include "ui/screens/life/life_counter_two_player.h"
 
 
 extern lv_obj_t *life_config_menu;
@@ -209,13 +209,13 @@ void renderLifeConfigScreen()
 
   static SharedInputState shared_input_state = {nullptr, nullptr, nullptr, nullptr};
 
-  // Create shared text area - HÖHER POSITIONIERT
+  // Create shared text area - POSITIONED HIGHER
   shared_input_state.ta = lv_textarea_create(life_config_menu);
   lv_textarea_set_one_line(shared_input_state.ta, true);
-  lv_obj_set_style_text_font(shared_input_state.ta, &lv_font_montserrat_32, 0);  // Größer
+  lv_obj_set_style_text_font(shared_input_state.ta, &lv_font_montserrat_32, 0);  // Larger
   lv_obj_set_style_text_color(shared_input_state.ta, lv_color_white(), 0);
   lv_obj_set_size(shared_input_state.ta, SCREEN_WIDTH - 120, 60);
-  lv_obj_align(shared_input_state.ta, LV_ALIGN_TOP_MID, 0, 20);  // Höher
+  lv_obj_align(shared_input_state.ta, LV_ALIGN_TOP_MID, 0, 20);  // Higher
   lv_obj_add_flag(shared_input_state.ta, LV_OBJ_FLAG_HIDDEN);
 
   // Create shared keyboard

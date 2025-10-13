@@ -25,9 +25,10 @@
 // UI Screens
 // ============================================
 #include "ui/screens/life/life_counter.h"
-#include "ui/screens/life/life_counter2P.h"
+#include "ui/screens/life/life_counter_two_player.h"
 #include "ui/screens/settings/settings_overlay.h"
 #include "ui/screens/settings/brightness.h"
+#include "ui/screens/settings/touch_calibration.h"
 #include "ui/screens/tools/timer.h"
 #include "ui/screens/tools/dice_coin.h"
 #include "ui/screens/menu/preset_editor.h"
@@ -567,6 +568,10 @@ void renderMenu(MenuState menuType, bool animate_menu)
     renderPresetEditorMenu();
     currentMenu = MENU_PRESET_EDITOR;
     break;
+  case MENU_TOUCH_CALIBRATION:
+    renderTouchCalibrationScreen();
+    currentMenu = MENU_TOUCH_CALIBRATION;
+    break;
   case MENU_NONE:
   default:
     showLifeScreen();
@@ -639,6 +644,7 @@ void teardownAllMenus()
   teardownDiceListMenu();
   teardownPresetListMenu();
   teardownPresetEditorMenu();
+  teardownTouchCalibrationScreen();
 }
 
 void teardownContextualMenuOverlay()

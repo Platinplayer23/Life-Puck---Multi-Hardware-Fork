@@ -20,7 +20,7 @@
 // UI Screens
 // ============================================
 #include "ui/screens/life/life_counter.h"
-#include "ui/screens/life/life_counter2P.h"
+#include "ui/screens/life/life_counter_two_player.h"
 #include "ui/screens/menu/menu.h"
 #include "ui/screens/tools/timer.h"
 

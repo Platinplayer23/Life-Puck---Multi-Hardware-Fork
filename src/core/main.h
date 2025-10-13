@@ -10,6 +10,6 @@
 
 extern PlayerMode life_counter_mode;
 
-BaseType_t create_task(TaskFunction_t task_function, const char *task_name, uint32_t stack_size, void *param, UBaseType_t priority, TaskHandle_t *task_handle = NULL);
+// Removed unused create_task function declaration
 
 #endif // MAIN_H

@@ -18,7 +18,7 @@
 // ============================================
 // Hardware (related modules)
 // ============================================
-#include "../display/Display_ST77916.h"
+#include "../display/display_st77916.h"
 #include "../system/shutdown.h"
 
 // ============================================
@@ -27,7 +27,7 @@
 #include "data/constants.h"
 
 
-// ### KORREKTUR: Alte, ungültige Deklaration entfernen ###
+// ### CORRECTION: Remove old, invalid declaration ###
 // extern esp_panel::board::Board *board;
 
 static BatteryState BAT_State = BAT_OFF;

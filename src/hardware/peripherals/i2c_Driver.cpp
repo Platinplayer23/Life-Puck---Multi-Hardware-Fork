@@ -1,8 +1,13 @@
+/**
+ * @file i2c_driver.cpp
+ * @brief I2C bus driver for peripheral communication
+ */
+
 #include "I2C_Driver.h"
 
-
 void I2C_Init(void) {
-  Wire.begin( I2C_SDA_PIN, I2C_SCL_PIN);                       
+  // Initialize I2C bus with specified SDA and SCL pins
+  Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 }
 
 
