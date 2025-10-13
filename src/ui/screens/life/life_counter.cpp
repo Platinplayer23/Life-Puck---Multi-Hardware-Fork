@@ -77,11 +77,10 @@ void init_life_counter()
   is_initializing = true;
   teardown_life_counter();
   
-  // *** AUTO-LOAD: Load saved life or use default max life ***
-  int saved_life = loadLifeFromNVS(1);  // Single-player = Player 1
-  event_grouper.resetHistory(saved_life);
-  
+  // Use default max life for initial UI setup - will be updated later
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
+  event_grouper.resetHistory(max_life);
+  
   int amp_mode = player_store.getInt(KEY_AMP_MODE, PLAYER_SINGLE);
 
   if (!life_counter_container)
@@ -181,6 +180,11 @@ void init_life_counter()
   {
     lv_obj_clear_flag(life_arc, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_arc_opa(life_arc, LV_OPA_COVER, LV_PART_INDICATOR);
+    
+    // *** AUTO-LOAD: Load saved life BEFORE animation to prevent blink ***
+    int saved_life = loadLifeFromNVS(1);  // Single-player = Player 1
+    event_grouper.resetHistory(saved_life);
+    
     lv_anim_t anim;
     lv_anim_init(&anim);
     lv_anim_set_var(&anim, NULL);
@@ -301,11 +305,11 @@ static void life_fadein_ready_cb(lv_anim_t *a)
 // Uses high-resolution interpolation for smooth movement even with low life values
 static void arc_sweep_anim_cb(void *var, int32_t v)
 {
-  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
+  int target_life = event_grouper.getLifeTotal(); // Use loaded life value instead of max
   // v goes from 0 to SMOOTH_ARC_STEPS (1000) for smooth interpolation
-  int interpolated_life = (v * max_life) / SMOOTH_ARC_STEPS;
-  if (interpolated_life > max_life)
-    interpolated_life = max_life;
+  int interpolated_life = (v * target_life) / SMOOTH_ARC_STEPS;
+  if (interpolated_life > target_life)
+    interpolated_life = target_life;
   update_life_label(interpolated_life);
 }
 
@@ -487,7 +491,6 @@ void queue_life_change(int player, int value)
     event_grouper.handleChange(player, value, get_elapsed_seconds(), [](const LifeHistoryEvent &evt) {
       // *** AUTO-SAVE: Save life to NVS whenever a change is committed ***
       saveLifeToNVS(evt.life_total, evt.player_id);
-      printf("[AutoSave] Life saved: %d for player %d\n", evt.life_total, evt.player_id);
     });
   }
   else if (grouped_change_label == nullptr && !is_initializing)
@@ -522,8 +525,9 @@ void saveLifeToNVS(int life_value, int player) {
 int loadLifeFromNVS(int player) {
     // Check if we have valid saved data
     int is_valid = player_store.getInt(KEY_LIFE_SAVE_VALID, 0);
+    
     if (is_valid != 1) {
-        printf("[LifePersist] No valid save found, using default max life\n");
+        printf("[LifePersist] No saved data, using default\n");
         return player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
     }
     
@@ -531,7 +535,7 @@ int loadLifeFromNVS(int player) {
     int default_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
     int saved_life = player_store.getInt(key, default_life);
     
-    printf("[LifePersist] Loaded P%d life: %d (valid=%d)\n", player, saved_life, is_valid);
+    printf("[LifePersist] Loaded P%d life: %d\n", player, saved_life);
     return saved_life;
 }
 

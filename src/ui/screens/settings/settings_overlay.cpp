@@ -56,7 +56,11 @@ void renderSettingsOverlay()
   lv_obj_set_style_border_opa(settings_menu, LV_OPA_TRANSP, LV_PART_MAIN);
   lv_obj_set_style_outline_opa(settings_menu, LV_OPA_TRANSP, LV_PART_MAIN);
   lv_obj_set_style_radius(settings_menu, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-  lv_obj_set_style_pad_all(settings_menu, 16, LV_PART_MAIN);
+  lv_obj_set_style_pad_all(settings_menu, 8, LV_PART_MAIN); // Etwas weniger Padding = mehr Scroll-Platz
+  
+  // Explizit Scrolling aktivieren
+  lv_obj_clear_flag(settings_menu, LV_OBJ_FLAG_SCROLL_MOMENTUM);  // Einfaches Scrolling
+  lv_obj_set_scroll_dir(settings_menu, LV_DIR_VER);              // Nur vertikal
 
   // SWIPE TO CLOSE
   bool swipe_enabled = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
@@ -101,10 +105,14 @@ void renderSettingsOverlay()
   }
 
   static lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, 45, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST}; // Kompakter + scrolling space
+  static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, 60, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST}; // Einfaches Grid
   lv_obj_set_grid_dsc_array(settings_menu, col_dsc, row_dsc);
   lv_obj_set_layout(settings_menu, LV_LAYOUT_GRID);
   lv_obj_set_scrollbar_mode(settings_menu, LV_SCROLLBAR_MODE_AUTO);
+  
+  // Explizit Scrolling forcieren
+  lv_obj_set_scroll_dir(settings_menu, LV_DIR_VER);
+  lv_obj_clear_flag(settings_menu, LV_OBJ_FLAG_SCROLL_MOMENTUM);
 
   // Battery indicator (Row 0 - top, centered)
   lv_obj_t *battery_label = lv_label_create(settings_menu);
@@ -348,27 +356,35 @@ void renderSettingsOverlay()
 
   // Edit Presets Button (Row 6, Left)
   lv_obj_t *btn_edit_presets = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_edit_presets, 120, 50);
+  lv_obj_set_size(btn_edit_presets, 120, 50); // Zurück zu normal size
   lv_obj_set_style_bg_color(btn_edit_presets, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 6, 1);  // Changed from Row 5 to Row 6
   lv_obj_t *lbl_edit = lv_label_create(btn_edit_presets);
   lv_label_set_text(lbl_edit, "Edit Presets");
-  lv_obj_set_style_text_font(lbl_edit, &lv_font_montserrat_18, 0);  // Smaller font for narrower button
+  lv_obj_set_style_text_font(lbl_edit, &lv_font_montserrat_18, 0);  // Zurück zu normal font
   lv_obj_center(lbl_edit);
   lv_obj_add_event_cb(btn_edit_presets, [](lv_event_t *e)
                       { renderMenu(MENU_PRESET_EDITOR); }, LV_EVENT_CLICKED, NULL);
 
   // Touch Calibration Button (Row 6, Right) 
   lv_obj_t *btn_touch_cal = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_touch_cal, 120, 50);
+  lv_obj_set_size(btn_touch_cal, 120, 50); // Zurück zu normal size
   lv_obj_set_style_bg_color(btn_touch_cal, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 6, 1);  // Changed from Row 5 to Row 6
   lv_obj_t *lbl_touch_cal = lv_label_create(btn_touch_cal);
   lv_label_set_text(lbl_touch_cal, "Touch Cal");
-  lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_18, 0); // Zurück zu normal font
   lv_obj_center(lbl_touch_cal);
   lv_obj_add_event_cb(btn_touch_cal, [](lv_event_t *e)
                       { renderMenu(MENU_TOUCH_CALIBRATION); }, LV_EVENT_CLICKED, NULL);
+
+  // *** SCROLL-FIX: Große unsichtbare Spacer-Komponente für Scrolling ***
+  lv_obj_t *spacer = lv_obj_create(settings_menu);
+  lv_obj_set_size(spacer, 10, 200);  // 200px hoch für Scrolling
+  lv_obj_set_grid_cell(spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 7, 1);  // Row 7, spanning both columns
+  lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);  // Unsichtbar
+  lv_obj_set_style_border_opa(spacer, LV_OPA_TRANSP, 0);  // Keine Border
+  lv_obj_clear_flag(spacer, LV_OBJ_FLAG_CLICKABLE);  // Nicht klickbar
 
 }
 

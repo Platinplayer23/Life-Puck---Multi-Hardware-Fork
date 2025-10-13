@@ -8,7 +8,7 @@
 
 // *** SMOOTH ANIMATION CONSTANTS ***
 #define SMOOTH_ARC_STEPS 1000        // High-resolution animation steps for smooth arcs
-#define ARC_ANIMATION_DURATION 300   // Fast, responsive 300ms animations
+#define ARC_ANIMATION_DURATION 600   // Noch langsamer für elegantere Animation (war 300ms)
 
 typedef struct
 {
@@ -21,7 +21,7 @@ typedef struct
 #define PLAYER_SINGLE 0
 #define PLAYER_ONE 1
 #define PLAYER_TWO 2
-#define GROUPER_WINDOW 2000
+#define GROUPER_WINDOW 500  // Reduced from 2000ms for faster auto-save
 
 enum PlayerMode
 {

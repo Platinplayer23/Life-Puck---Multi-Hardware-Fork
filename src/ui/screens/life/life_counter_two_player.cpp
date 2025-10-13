@@ -80,19 +80,26 @@ static lv_obj_t *grouped_change_label_p1 = nullptr;
 static lv_obj_t *grouped_change_label_p2 = nullptr;
 static bool is_initializing_2p = false;
 
+// *** Animation targets for blink prevention ***
+static int target_life_p1 = 0;
+static int target_life_p2 = 0;
+
 // Call this after boot animation to show the two-player life counter
 void init_life_counter_2P()
 {
   is_initializing_2p = true;  // Set flag to indicate initialization is active
   teardown_life_counter_2P(); // Clean up any previous state
   
-  // *** AUTO-LOAD: Load saved life for both players ***
-  int saved_life_p1 = loadLifeFromNVS(1);  // Player 1
-  int saved_life_p2 = loadLifeFromNVS(2);  // Player 2
-  event_grouper_p1.resetHistory(saved_life_p1);
-  event_grouper_p2.resetHistory(saved_life_p2);
-  
+  // Use default max life for initial UI setup - will be updated later
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
+  event_grouper_p1.resetHistory(max_life);
+  event_grouper_p2.resetHistory(max_life);
+  
+  // *** LOAD SAVED LIFE VALUES for animation targets ***
+  target_life_p1 = loadLifeFromNVS(1);  // Player 1
+  target_life_p2 = loadLifeFromNVS(2);  // Player 2
+  event_grouper_p1.resetHistory(target_life_p1);
+  event_grouper_p2.resetHistory(target_life_p2);
   if (!life_counter_container_2p)
   {
     life_counter_container_2p = lv_obj_create(lv_scr_act());
@@ -310,12 +317,12 @@ void reset_life_2p()
 // Uses high-resolution interpolation for smooth movement even with low life values
 static void arc_sweep_anim_cb_p1(void *var, int32_t v)
 {
-  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   // v goes from 0 to SMOOTH_ARC_STEPS (1000) for smooth interpolation
-  int interpolated_life = (v * max_life) / SMOOTH_ARC_STEPS;
-  if (interpolated_life > max_life)
-    interpolated_life = max_life;
+  int interpolated_life = (v * target_life_p1) / SMOOTH_ARC_STEPS;
+  if (interpolated_life > target_life_p1)
+    interpolated_life = target_life_p1;
   
+  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   int arc_start = 90 + ARC_GAP_DEGREES / 2;
   int arc_end = 270;
   int arc_span = arc_end - arc_start;
@@ -331,12 +338,12 @@ static void arc_sweep_anim_cb_p1(void *var, int32_t v)
 // Uses high-resolution interpolation for smooth movement even with low life values
 static void arc_sweep_anim_cb_p2(void *var, int32_t v)
 {
-  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   // v goes from 0 to SMOOTH_ARC_STEPS (1000) for smooth interpolation
-  int interpolated_life = (v * max_life) / SMOOTH_ARC_STEPS;
-  if (interpolated_life > max_life)
-    interpolated_life = max_life;
+  int interpolated_life = (v * target_life_p2) / SMOOTH_ARC_STEPS;
+  if (interpolated_life > target_life_p2)
+    interpolated_life = target_life_p2;
   
+  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   int arc_start = 270;
   int arc_end = 90 - ARC_GAP_DEGREES / 2;
   int arc_span = (arc_end - arc_start + 360) % 360;
@@ -353,6 +360,7 @@ static void arc_sweep_anim_cb_p2(void *var, int32_t v)
 // Animation ready callback
 static void arc_sweep_anim_ready_cb(lv_anim_t *a)
 {
+  // Values already loaded in init, just finish initialization
   is_initializing_2p = false;
   
   register_gesture_callback(GestureType::TapTopLeft, []()
@@ -545,6 +553,5 @@ void queue_life_change_2p(int player, int value)
   grouper->handleChange(player, value, get_elapsed_seconds(), [](const LifeHistoryEvent &evt) {
     // *** AUTO-SAVE: Save life to NVS whenever a change is committed (Two-Player) ***
     saveLifeToNVS(evt.life_total, evt.player_id);
-    printf("[AutoSave-2P] Life saved: %d for player %d\n", evt.life_total, evt.player_id);
   });
 }
