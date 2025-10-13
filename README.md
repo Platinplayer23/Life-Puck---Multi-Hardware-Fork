@@ -65,7 +65,7 @@ This fork supports **two** Waveshare ESP32-S3 display variants:
 ### New Game Features
 - ✅ **🎲 Dice Roller**: Roll D4, D6, D8, D10, D12, and D20
 - ✅ **🪙 Coin Flip**: Coin flip for random heads/tails decisions
-- ✅ **⚙️ Game Presets**: Pre-configured settings for popular TCGs (MTG, Yu-Gi-Oh!, Pokémon)
+- ✅ **⚙️ Game Presets**: Pre-configured settings for popular TCGs (MTG, Yu-Gi-Oh!, Pokémon, FaB, Lorcana, One Piece)
 - ✅ **✏️ Preset Editor**: Create and save custom game configurations
 - ✅ **⏱️ Round Timer**: Track round duration with stopwatch and countdown modes
 - ✅ **📊 Enhanced Timer**: Switchable timer modes (stopwatch/countdown) with configurable round times
@@ -346,67 +346,23 @@ But the on-device keyboard can be difficult to use. Instead you can, add custom 
 
 Edit the preset initialization function in **`src/tcg_presets.cpp`**:
 
-void init_presets() {  
-// MTG Standard  
-strncpy(TCG_PRESETS.name, "MTG Standard", sizeof(TCG_PRESETS.name) - 1);  
-TCG_PRESETS.starting_life = 20;  
-TCG_PRESETS.small_step = 1;  
-TCG_PRESETS.large_step = 5;  
-
-
-// MTG Commander  
-strncpy(TCG_PRESETS.name, "MTG Commander", sizeof(TCG_PRESETS.name) - 1);[1]  
-TCG_PRESETS.starting_life = 40;[1]  
-TCG_PRESETS.small_step = 1;[1]  
-TCG_PRESETS.large_step = 10;[1]  
-
-// Pokemon TCG  
-strncpy(TCG_PRESETS.name, "Pokemon TCG", sizeof(TCG_PRESETS.name) - 1);[2]  
-TCG_PRESETS.starting_life = 60;[2]  
-TCG_PRESETS.small_step = 10;[2]  
-TCG_PRESETS.large_step = 30;[2]  
-
-// Yu-Gi-Oh!  
-strncpy(TCG_PRESETS.name, "Yu-Gi-Oh!", sizeof(TCG_PRESETS.name) - 1);[3]  
-TCG_PRESETS.starting_life = 8000;[3]  
-TCG_PRESETS.small_step = 50;[3]  
-TCG_PRESETS.large_step = 500;[3]  
-
-// Custom slots 5-10  
-for (int i = 4; i < 10; i++) {  
-    snprintf(TCG_PRESETS[i].name, sizeof(TCG_PRESETS[i].name), "Custom %d", i + 1);  
-    TCG_PRESETS[i].starting_life = 20;  
-    TCG_PRESETS[i].small_step = 1;  
-    TCG_PRESETS[i].large_step = 5;  
-}
-
-}
-
 
 ### Step 2: Add Your Custom Game
 
-**Example: Flesh and Blood (FaB)**
+**Example: Custom Slot**
 
-Replace one of the Custom slots (index 4-9):  
- Just add the following above Custom slots
+Just fill in the Game Data:
 
-// Flesh and Blood  
-strncpy(TCG_PRESETS.name, "FaB", sizeof(TCG_PRESETS.name) - 1);  
-​
-TCG_PRESETS.starting_life = 20;​  
-TCG_PRESETS.small_step = 1;​  
-TCG_PRESETS.large_step = 5;  
-
-​And then increse int i = 4 of Custom slots by 1:
-for (int i = 5; i < 10; i++) {  
-    snprintf(TCG_PRESETS[i].name, sizeof(TCG_PRESETS[i].name), "Custom %d", i + 1);  
-    TCG_PRESETS[i].starting_life = 20;  
-    TCG_PRESETS[i].small_step = 1;  
-    TCG_PRESETS[i].large_step = 5;  
-}
+    // ---- SLOT 7: Custom ----
+    strncpy(TCG_PRESETS[7].name, "Custom 8", sizeof(TCG_PRESETS[7].name) - 1);
+    TCG_PRESETS[7].starting_life = 20;
+    TCG_PRESETS[7].small_step = 1;
+    TCG_PRESETS[7].large_step = 5;
 
 
-
+First Line is just the Name as a comment keep the //  
+Second Line replace "Custom 8" with "Name of Your Game"  
+And for the Rest just change the numbers according to your needs
 ### Preset Format
 
 TCG_PRESETS[index].name // Display name (max 15 characters)  
@@ -417,22 +373,6 @@ TCG_PRESETS[index].large_step // Large increment (swipe)
 
 ### Common TCG Presets
 
-**Flesh and Blood:**
-
-strncpy(TCG_PRESETS.name, "FaB", sizeof(TCG_PRESETS.name) - 1);  
-TCG_PRESETS.starting_life = 20;​  
-TCG_PRESETS.small_step = 1;​  
-TCG_PRESETS.large_step = 5;  
-
-
-
-**Lorcana:**
-
-strncpy(TCG_PRESETS.name, "Lorcana", sizeof(TCG_PRESETS.name) - 1); 
-TCG_PRESETS.starting_life = 20;​  
-TCG_PRESETS.small_step = 1;​  
-TCG_PRESETS.large_step = 5;  
-
 
 
 **Cardfight!! Vanguard:**
@@ -442,7 +382,7 @@ TCG_PRESETS.starting_life = 5;
 TCG_PRESETS.small_step = 1;​  
 TCG_PRESETS.large_step = 2;  
 
-​
+
 
 **Digimon Card Game:**
 
@@ -451,16 +391,7 @@ TCG_PRESETS.starting_life = 5; // Security cards​
 TCG_PRESETS.small_step = 1;​  
 TCG_PRESETS.large_step = 2;  
 
-​
 
-**One Piece Card Game:**
-
-strncpy(TCG_PRESETS.name, "One Piece", sizeof(TCG_PRESETS.name) - 1);  
-TCG_PRESETS.starting_life = 5; // Life cards​  
-TCG_PRESETS.small_step = 1;​  
-TCG_PRESETS.large_step = 2;  
-
-​
 
 **Star Wars Unlimited:**
 
@@ -480,8 +411,8 @@ TCG_PRESETS.large_step = 5;
 ### Notes
 
 - Maximum 10 presets (indices 0-9)
-- First 4 slots are reserved for default games (MTG, Commander, Pokémon, Yu-Gi-Oh!)
-- Use slots 4-9 for custom games
+- First 7 slots are pre configurde with default games
+- Every Slot can be changed
 - Preset names are limited to 15 characters
 - Changes require recompiling and re-uploading firmware except using the on-board menu
 
