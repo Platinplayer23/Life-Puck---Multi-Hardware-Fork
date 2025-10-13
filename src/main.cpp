@@ -1,23 +1,47 @@
+// ============================================
+// System & Framework Headers
+// ============================================
 #include <Arduino.h>
 #include <lvgl.h>
-#include "ArduinoNvs.h"
-#include "gui_main.h"
-#include "power_key/power_key.h"
-#include "constants/constants.h"
-#include "battery/battery_state.h"
-#include <life/life_counter.h>
-#include <life/life_counter2P.h>
-#include <helpers/event_grouper.h>
-#include "main.h"
-#include "state/state_store.h"
-#include "tcg_presets.h"
-#include "dice_coin.h"
+#include <ArduinoNvs.h>
 
-#include "I2C_Driver.h"
-#include "TCA9554PWR.h"
-#include "Display_ST77916.h"
-#include "Touch_CST816.h"
-#include "LVGL_Driver.h"
+// ============================================
+// Config Headers
+// ============================================
+#include <board_config.h>
+
+// ============================================
+// Core System
+// ============================================
+#include "core/gui_main.h"
+#include "core/main.h"
+#include "core/state_manager.h"
+
+// ============================================
+// Hardware Layer
+// ============================================
+#include "hardware/peripherals/i2c_Driver.h"
+#include "hardware/peripherals/TCA9554PWR.h"
+#include "hardware/peripherals/power_key.h"
+#include "hardware/display/Display_ST77916.h"
+#include "hardware/display/LVGL_Driver.h"
+#include "hardware/touch/Touch_CST816.h"
+#include "hardware/system/battery_state.h"
+
+// ============================================
+// UI Layer
+// ============================================
+#include "ui/screens/life/life_counter.h"
+#include "ui/screens/life/life_counter2P.h"
+#include "ui/screens/tools/dice_coin.h"
+#include "ui/helpers/event_grouper.h"
+
+// ============================================
+// Data Layer
+// ============================================
+#include "data/constants.h"
+#include "data/tcg_presets.h"
+
 
 extern uint8_t Touch_interrupts;
 
