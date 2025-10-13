@@ -7,10 +7,12 @@ uint8_t Touch_interrupts=0;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// I2C
+// I2C - Unterschiedlich je Board-Variante
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, uint32_t Length)
 {
+#if defined(BOARD_1_85C)
+  // C-Variante: Haupt-I2C Bus (Wire)
   Wire.beginTransmission(Driver_addr);
   Wire.write(Reg_addr); 
   if ( Wire.endTransmission(true)){
@@ -21,11 +23,26 @@ bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, u
   for (int i = 0; i < Length; i++) {
     *Reg_data++ = Wire.read();
   }
+#else
+  // Nicht-C: Separater Touch-I2C Bus (Wire1) wie im Demo
+  Wire1.beginTransmission(Driver_addr);
+  Wire1.write(Reg_addr); 
+  if ( Wire1.endTransmission(true)){
+    printf("The I2C transmission fails. - I2C Read\r\n");
+    return true;
+  }
+  Wire1.requestFrom(Driver_addr, Length);
+  for (int i = 0; i < Length; i++) {
+    *Reg_data++ = Wire1.read();
+  }
+#endif
   return true;
 }
 
 bool I2C_Write_Touch(uint8_t Driver_addr, uint8_t Reg_addr, const uint8_t *Reg_data, uint32_t Length)
 {
+#if defined(BOARD_1_85C)
+  // C-Variante: Haupt-I2C Bus (Wire)
   Wire.beginTransmission(Driver_addr);
   Wire.write(Reg_addr);       
   for (int i = 0; i < Length; i++) {
@@ -36,6 +53,19 @@ bool I2C_Write_Touch(uint8_t Driver_addr, uint8_t Reg_addr, const uint8_t *Reg_d
     printf("The I2C transmission fails. - I2C Write\r\n");
     return false;
   }
+#else
+  // Nicht-C: Separater Touch-I2C Bus (Wire1) wie im Demo
+  Wire1.beginTransmission(Driver_addr);
+  Wire1.write(Reg_addr);       
+  for (int i = 0; i < Length; i++) {
+    Wire1.write(*Reg_data++);
+  }
+  if ( Wire1.endTransmission(true))
+  {
+    printf("The I2C transmission fails. - I2C Write\r\n");
+    return false;
+  }
+#endif
   return true;
 }
 
@@ -48,19 +78,26 @@ void ARDUINO_ISR_ATTR Touch_CST816_ISR(void) {
 
 
 uint8_t Touch_Init(void) {
-#if HAS_GPIO_EXTENDER == 0
-  // 1.85: Setup Direct GPIO Pin for Touch Reset
-  gpio_config_t io_conf = {};
-  io_conf.pin_bit_mask = (1ULL << TOUCH_PIN_RST);
-  io_conf.mode = GPIO_MODE_OUTPUT;
-  io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-  io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-  gpio_config(&io_conf);
-  gpio_set_level((gpio_num_t)TOUCH_PIN_RST, 1);
+#if defined(BOARD_1_85C)
+  // C-Variante: Kein separater Wire1.begin() - verwendet Haupt-I2C
+  // (I2C wird bereits über I2C_Init() in main.cpp initialisiert)
+#else
+  // Nicht-C: Separater Touch-I2C Bus (Wire1) wie im Demo
+  Wire1.begin(TOUCH_PIN_SDA, TOUCH_PIN_SCL, 400000);  // Pin 1,3 mit 400kHz
+  printf("[Touch] Wire1 initialized: SDA=%d, SCL=%d\n", TOUCH_PIN_SDA, TOUCH_PIN_SCL);
 #endif
 
-  Wire.begin(TOUCH_PIN_SDA, TOUCH_PIN_SCL);
-  
+  // GPIO Setup für Reset-Pin (falls nicht über EXIO)
+  #if HAS_GPIO_EXTENDER == 0 && TOUCH_PIN_RST != -1
+    gpio_config_t io_conf = {};
+    io_conf.pin_bit_mask = (1ULL << TOUCH_PIN_RST);
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    gpio_config(&io_conf);
+    gpio_set_level((gpio_num_t)TOUCH_PIN_RST, 1);
+  #endif
+
   CST816_Touch_Reset();
   uint16_t Verification = CST816_Read_cfg();
   CST816_AutoSleep(true);

@@ -1,16 +1,13 @@
 #pragma once
 #include <Wire.h> 
-
-/// I2C SCL (clock) pin for hardware communication
-#define I2C_SCL_PIN       10
-/// I2C SDA (data) pin for hardware communication
-#define I2C_SDA_PIN       11
+#include "board_config.h"  // Include board-specific pin definitions
 
 /**
  * @brief Initialize I2C bus for peripheral communication
  * 
  * Configures I2C pins and starts Wire library for communication
  * with touch controller, GPIO expander, and other peripherals.
+ * Uses pin definitions from board_config.h to support different hardware variants.
  */
 void I2C_Init(void);
 
