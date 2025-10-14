@@ -61,3 +61,11 @@ private:
 
 /// Global instance for player/game state storage
 extern StateStore player_store;
+
+// Timer settings functions
+bool getTimerEnabled();
+void toggleTimerEnabled();
+int getTimerDuration();
+void setTimerDuration(int duration);
+bool getTimerWarningEnabled();
+void toggleTimerWarningEnabled();

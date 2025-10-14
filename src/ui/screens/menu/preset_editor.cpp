@@ -132,7 +132,7 @@ void renderPresetEditorMenu() {
   
   lv_obj_t *title = lv_label_create(preset_editor_menu);
   lv_label_set_text(title, "PRESETS");
-  lv_obj_set_style_text_color(title, lv_color_hex(0x00FFFF), 0);
+  lv_obj_set_style_text_color(title, LIGHTNING_BLUE_COLOR, 0);
   lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
   lv_obj_set_style_pad_bottom(title, 10, 0);
   
@@ -170,6 +170,7 @@ void renderPresetEditorMenu() {
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_back = lv_label_create(btn_back);
   lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
+  lv_obj_set_style_text_color(lbl_back, lv_color_white(), 0);
   lv_obj_center(lbl_back);
 }
 
@@ -188,14 +189,14 @@ static void show_name_popup(int preset_idx) {
   lv_obj_t *lbl_title = lv_label_create(name_popup);
   lv_label_set_text(lbl_title, "Name:");
   lv_obj_set_style_text_font(lbl_title, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_title, lv_color_hex(0x00FFFF), 0);
+  lv_obj_set_style_text_color(lbl_title, LIGHTNING_BLUE_COLOR, 0);
   lv_obj_align(lbl_title, LV_ALIGN_TOP_MID, 0, 10);
   
   ta_name = lv_textarea_create(name_popup);
   lv_obj_set_size(ta_name, SCREEN_WIDTH - 40, 50);
   lv_obj_align(ta_name, LV_ALIGN_TOP_MID, 0, 45);
   lv_textarea_set_text(ta_name, TCG_PRESETS[preset_idx].name);
-  lv_textarea_set_max_length(ta_name, 20);
+  lv_textarea_set_max_length(ta_name, 20); // Maximum 20 characters
   lv_textarea_set_one_line(ta_name, true);
   lv_obj_set_style_text_font(ta_name, &lv_font_montserrat_24, 0);
   
@@ -206,15 +207,31 @@ static void show_name_popup(int preset_idx) {
   lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, -50);
   
   lv_obj_add_event_cb(ta_name, [](lv_event_t *ev) {
-    if (lv_event_get_code(ev) == LV_EVENT_READY) {
+    lv_event_code_t code = lv_event_get_code(ev);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+      // Limit name length to 20 characters
+      lv_obj_t *ta_src = (lv_obj_t*)lv_event_get_target(ev);
+      const char *text = lv_textarea_get_text(ta_src);
+      if (strlen(text) > 20) {
+        char limited[21];
+        strncpy(limited, text, 20);
+        limited[20] = '\0';
+        lv_textarea_set_text(ta_src, limited);
+      }
+    }
+    else if (code == LV_EVENT_READY) {
       lv_obj_t *ta_src = (lv_obj_t*)lv_event_get_target(ev);
       const char *name = lv_textarea_get_text(ta_src);
-      strncpy(TCG_PRESETS[current_preset_idx].name, name, sizeof(TCG_PRESETS[current_preset_idx].name) - 1);
+      // Ensure name is max 20 characters
+      char limited[21];
+      strncpy(limited, name, 20);
+      limited[20] = '\0';
+      strncpy(TCG_PRESETS[current_preset_idx].name, limited, sizeof(TCG_PRESETS[current_preset_idx].name) - 1);
       TCG_PRESETS[current_preset_idx].name[sizeof(TCG_PRESETS[current_preset_idx].name) - 1] = '\0';
       close_name_popup();
       show_values_popup(current_preset_idx);
     }
-  }, LV_EVENT_READY, NULL);
+  }, LV_EVENT_ALL, NULL);
   
   lv_obj_t *btn_apply = lv_btn_create(name_popup);
   lv_obj_set_size(btn_apply, 120, 45);
@@ -226,7 +243,11 @@ static void show_name_popup(int preset_idx) {
     int idx = (int)(intptr_t)lv_obj_get_user_data(target);
     
     const char *name = lv_textarea_get_text(ta_name);
-    strncpy(TCG_PRESETS[idx].name, name, sizeof(TCG_PRESETS[idx].name) - 1);
+    // Ensure name is max 20 characters
+    char limited[21];
+    strncpy(limited, name, 20);
+    limited[20] = '\0';
+    strncpy(TCG_PRESETS[idx].name, limited, sizeof(TCG_PRESETS[idx].name) - 1);
     TCG_PRESETS[idx].name[sizeof(TCG_PRESETS[idx].name) - 1] = '\0';
     
     close_name_popup();
@@ -271,6 +292,60 @@ static void shared_ta_event_cb(lv_event_t *e)
     int value = atoi(lv_textarea_get_text(state->ta));
     if (value >= 0 && value < 10000)
     {
+      // Check if this is the temp_life variable and limit it to the actual maximum
+      if (state->current_var == &temp_life)
+      {
+        if (value > 9999)
+        {
+          value = 9999;
+          // Update the textarea with the corrected value
+          char buf[16];
+          snprintf(buf, sizeof(buf), "%d", value);
+          lv_textarea_set_text(state->ta, buf);
+        }
+      }
+      // Check if this is a step variable and limit it to the actual maximum
+      else if (state->current_var == &temp_small || state->current_var == &temp_large)
+      {
+        if (value > 9999)
+        {
+          value = 9999;
+          // Update the textarea with the corrected value
+          char buf[16];
+          snprintf(buf, sizeof(buf), "%d", value);
+          lv_textarea_set_text(state->ta, buf);
+        }
+      }
+      
+      *(state->current_var) = value;
+      char buf[16];
+      snprintf(buf, sizeof(buf), "%d", value);
+      lv_label_set_text(state->current_label, buf);
+    }
+  }
+  else if (code == LV_EVENT_READY && state->current_var && state->current_label)
+  {
+    // Final validation when user presses OK
+    int value = atoi(lv_textarea_get_text(state->ta));
+    if (value >= 0) // Allow all positive values, but validate against maximums
+    {
+      // Check if this is the temp_life variable and limit it to the actual maximum
+      if (state->current_var == &temp_life)
+      {
+        if (value > 9999)
+        {
+          value = 9999;
+        }
+      }
+      // Check if this is a step variable and limit it to the actual maximum
+      else if (state->current_var == &temp_small || state->current_var == &temp_large)
+      {
+        if (value > 9999)
+        {
+          value = 9999;
+        }
+      }
+      
       *(state->current_var) = value;
       char buf[16];
       snprintf(buf, sizeof(buf), "%d", value);

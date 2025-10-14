@@ -179,3 +179,28 @@ void simple_audio_cleanup() {
         printf("[Audio] I2S audio cleaned up\n");
     }
 }
+
+// Wrapper functions for settings compatibility
+bool getAudioEnabled() {
+    return simple_audio_is_enabled();
+}
+
+void toggleAudioEnabled() {
+    simple_audio_set_enabled(!simple_audio_is_enabled());
+}
+
+int getVolume() {
+    return simple_audio_get_volume();
+}
+
+void setVolume(int volume) {
+    simple_audio_set_volume(volume);
+}
+
+bool getSoundEffectsEnabled() {
+    return simple_audio_is_enabled(); // For now, same as audio enabled
+}
+
+void toggleSoundEffectsEnabled() {
+    toggleAudioEnabled(); // For now, same as audio toggle
+}

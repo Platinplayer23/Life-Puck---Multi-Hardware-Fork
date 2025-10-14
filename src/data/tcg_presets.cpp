@@ -1,5 +1,6 @@
 #include "tcg_presets.h"
 #include "core/state_manager.h"
+#include "ui/screens/menu/menu.h"
 #include <cstring>
 
 TCGPreset TCG_PRESETS[10];
@@ -142,6 +143,11 @@ void save_preset(int index) {
     if (index >= 0 && index < TCG_PRESET_COUNT) {
         current_preset_index = index;
         player_store.putInt("preset_idx", index);
+        
+        // Reset life points to preset values
+        resetActiveCounter();
+        
+        printf("[Preset] Applied preset %s with %d starting life\n", TCG_PRESETS[index].name, TCG_PRESETS[index].starting_life);
     }
 }
 

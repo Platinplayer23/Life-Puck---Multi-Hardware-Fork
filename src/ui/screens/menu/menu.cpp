@@ -29,6 +29,8 @@
 #include "ui/screens/settings/settings_overlay.h"
 #include "ui/screens/settings/brightness.h"
 #include "ui/screens/settings/touch_calibration.h"
+#include "ui/screens/settings/audio_settings.h"
+#include "ui/screens/settings/timer_settings.h"
 #include "ui/screens/tools/timer.h"
 #include "ui/screens/tools/dice_coin.h"
 #include "ui/screens/menu/preset_editor.h"
@@ -65,10 +67,10 @@ static int current_menu_page = 0;
 static const int TOTAL_MENU_PAGES = 2;
 
 static void togglePlayerMode();
-static void resetActiveCounter();
+void resetActiveCounter();
 static void showHistoryOverlay();
 static void showLifeScreen();
-static void hideLifeScreen();
+void hideLifeScreen();
 void teardownContextualMenuOverlay();
 static bool is_in_center_cancel_area(lv_event_t *e);
 void renderMenu(MenuState menuType);
@@ -115,7 +117,7 @@ void handleContextualSelection(ContextualQuadrant quadrant)
     case QUADRANT_TR:
       {
         bool heads = flip_coin();
-        show_tcg_result_popup("COIN", heads ? "HEADS" : "TAILS");
+        show_tcg_result_popup("Coin flip", heads ? "HEADS" : "TAILS");
       }
       break;
     case QUADRANT_BL:
@@ -134,12 +136,16 @@ static void togglePlayerMode()
     current_mode = PLAYER_MODE_ONE_PLAYER;
   PlayerMode new_mode = (current_mode == PLAYER_MODE_ONE_PLAYER) ? PLAYER_MODE_TWO_PLAYER : PLAYER_MODE_ONE_PLAYER;
   player_store.putInt(KEY_PLAYER_MODE, (int)new_mode);
-  printf("[togglePlayerMode] Player mode toggled to %d\n", new_mode);
+  
+  // Reset life points when switching player modes - use existing reset function
+  resetActiveCounter();
+  
+  printf("[togglePlayerMode] Player mode toggled to %d, life points reset\n", new_mode);
   ui_init();
   renderMenu(MENU_NONE);
 }
 
-static void resetActiveCounter()
+void resetActiveCounter()
 {
   PlayerMode player_mode = (PlayerMode)player_store.getInt(KEY_PLAYER_MODE, PLAYER_MODE_ONE_PLAYER);
   if (player_mode == PLAYER_MODE_ONE_PLAYER)
@@ -163,12 +169,12 @@ void show_tcg_result_popup(const char* title, const char* result) {
   lv_obj_center(popup);
   lv_obj_set_style_bg_color(popup, lv_color_hex(0x202020), 0);
   lv_obj_set_style_border_width(popup, 3, 0);
-  lv_obj_set_style_border_color(popup, lv_color_hex(0x00FFFF), 0);
+  lv_obj_set_style_border_color(popup, LIGHTNING_BLUE_COLOR, 0);
   lv_obj_set_style_radius(popup, 20, 0);
   
   lv_obj_t *lbl_title = lv_label_create(popup);
   lv_label_set_text(lbl_title, title);
-  lv_obj_set_style_text_color(lbl_title, lv_color_hex(0x00FFFF), 0);
+  lv_obj_set_style_text_color(lbl_title, LIGHTNING_BLUE_COLOR, 0);
   lv_obj_align(lbl_title, LV_ALIGN_TOP_MID, 0, 15);
   
   lv_obj_t *lbl_result = lv_label_create(popup);
@@ -244,14 +250,14 @@ void renderDiceListMenu() {
   
   lv_obj_t *title = lv_label_create(dice_list_menu);
   lv_label_set_text(title, "DICE");
-  lv_obj_set_style_text_color(title, lv_color_hex(0x00FFFF), 0);
+  lv_obj_set_style_text_color(title, LIGHTNING_BLUE_COLOR, 0);
   lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
   lv_obj_set_style_pad_bottom(title, 10, 0);
   
   for (int i = 0; i < DICE_TYPE_COUNT; i++) {
     lv_obj_t *btn = lv_btn_create(dice_list_menu);
     lv_obj_set_size(btn, 160, 40);
-    lv_obj_set_style_bg_color(btn, lv_color_hex(0x2a2a2a), 0);
+    lv_obj_set_style_bg_color(btn, LIGHTNING_BLUE_COLOR, 0);
     lv_obj_set_user_data(btn, (void*)(intptr_t)i);
     lv_obj_add_event_cb(btn, [](lv_event_t *e) {
       lv_obj_t *target = (lv_obj_t*)lv_event_get_target(e);
@@ -277,6 +283,7 @@ void renderDiceListMenu() {
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_back = lv_label_create(btn_back);
   lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
+  lv_obj_set_style_text_color(lbl_back, lv_color_white(), 0);
   lv_obj_center(lbl_back);
   
   currentMenu = MENU_DICE_LIST;
@@ -341,14 +348,14 @@ void renderPresetListMenu() {
   
   lv_obj_t *title = lv_label_create(preset_list_menu);
   lv_label_set_text(title, "PRESETS");
-  lv_obj_set_style_text_color(title, lv_color_hex(0x00FFFF), 0);
+  lv_obj_set_style_text_color(title, LIGHTNING_BLUE_COLOR, 0);
   lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
   lv_obj_set_style_pad_bottom(title, 10, 0);
   
   for (int i = 0; i < TCG_PRESET_COUNT; i++) {
     lv_obj_t *btn = lv_btn_create(preset_list_menu);
     lv_obj_set_size(btn, 180, 45);
-    lv_obj_set_style_bg_color(btn, lv_color_hex(0x2a2a2a), 0);
+    lv_obj_set_style_bg_color(btn, LIGHTNING_BLUE_COLOR, 0);
     lv_obj_set_user_data(btn, (void*)(intptr_t)i);
     lv_obj_add_event_cb(btn, [](lv_event_t *e) {
       lv_obj_t *target = (lv_obj_t*)lv_event_get_target(e);
@@ -381,6 +388,7 @@ void renderPresetListMenu() {
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_back = lv_label_create(btn_back);
   lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
+  lv_obj_set_style_text_color(lbl_back, lv_color_white(), 0);
   lv_obj_center(lbl_back);
   
   currentMenu = MENU_PRESET_LIST;
@@ -428,12 +436,12 @@ void renderContextualMenuOverlay(bool animate_menu)
     lv_obj_align(lbl_br, LV_ALIGN_CENTER, ring_radius / 2, ring_radius / 2);
   } else {
     lv_obj_t *lbl_tl = lv_label_create(contextual_menu);
-    lv_label_set_text(lbl_tl, "W6");
+    lv_label_set_text(lbl_tl, "D");
     lv_obj_set_style_text_font(lbl_tl, &lv_font_montserrat_40, 0);
     lv_obj_align(lbl_tl, LV_ALIGN_CENTER, -ring_radius / 2, -ring_radius / 2);
 
     lv_obj_t *lbl_tr = lv_label_create(contextual_menu);
-    lv_label_set_text(lbl_tr, "O");
+    lv_label_set_text(lbl_tr, "C");
     lv_obj_set_style_text_font(lbl_tr, &lv_font_montserrat_40, 0);
     lv_obj_align(lbl_tr, LV_ALIGN_CENTER, ring_radius / 2, -ring_radius / 2);
 
@@ -512,7 +520,7 @@ void renderContextualMenuOverlay(bool animate_menu)
     lv_obj_clear_flag(dot, LV_OBJ_FLAG_CLICKABLE);
     
     if (i == current_menu_page) {
-      lv_obj_set_style_bg_color(dot, lv_color_hex(0x00FFFF), 0);
+      lv_obj_set_style_bg_color(dot, LIGHTNING_BLUE_COLOR, 0);
       lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
     } else {
       lv_obj_set_style_bg_color(dot, lv_color_hex(0x666666), 0);
@@ -571,6 +579,16 @@ void renderMenu(MenuState menuType, bool animate_menu)
   case MENU_TOUCH_CALIBRATION:
     renderTouchCalibrationScreen();
     currentMenu = MENU_TOUCH_CALIBRATION;
+    break;
+  case MENU_AUDIO_SETTINGS:
+    teardownAudioSettingsMenu();
+    renderAudioSettingsMenu();
+    currentMenu = MENU_AUDIO_SETTINGS;
+    break;
+  case MENU_TIMER_SETTINGS:
+    teardownTimerSettingsMenu();
+    renderTimerSettingsMenu();
+    currentMenu = MENU_TIMER_SETTINGS;
     break;
   case MENU_NONE:
   default:
@@ -645,6 +663,8 @@ void teardownAllMenus()
   teardownPresetListMenu();
   teardownPresetEditorMenu();
   teardownTouchCalibrationScreen();
+  teardownAudioSettingsMenu();
+  teardownTimerSettingsMenu();
 }
 
 void teardownContextualMenuOverlay()

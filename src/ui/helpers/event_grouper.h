@@ -52,10 +52,11 @@ public:
   // Call this for each life change (tap/swipe)
   void handleChange(int player, int change, uint64_t game_timestamp, std::function<void(const LifeHistoryEvent &)> onCommit)
   {
-    if (!get_is_timer_running())
-    {
-      toggle_timer_running(); // Ensure timer is running
-    }
+    // REMOVED: Automatic timer start - timer should only start manually
+    // if (!get_is_timer_running())
+    // {
+    //   toggle_timer_running(); // Ensure timer is running
+    // }
     commit_callback = onCommit;
     uint32_t now = millis();
     last_event_time = now;

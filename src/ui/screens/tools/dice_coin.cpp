@@ -35,13 +35,13 @@ bool flip_coin() {
 
 // Würfel-Liste für UI
 const DiceType DICE_TYPES[] = {
-    {"W4", roll_d4},
-    {"W6", roll_d6},
-    {"W8", roll_d8},
-    {"W10", roll_d10},
-    {"W12", roll_d12},
-    {"W20", roll_d20},
-    {"W100", roll_d100}
+    {"D4", roll_d4},
+    {"D6", roll_d6},
+    {"D8", roll_d8},
+    {"D10", roll_d10},
+    {"D12", roll_d12},
+    {"D20", roll_d20},
+    {"D100", roll_d100}
 };
 
 const int DICE_TYPE_COUNT = 7;

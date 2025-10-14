@@ -34,3 +34,11 @@ bool simple_audio_is_enabled();
 void simple_audio_set_timer_sound(sound_type_t sound);
 sound_type_t simple_audio_get_timer_sound();
 void simple_audio_cleanup();
+
+// Wrapper functions for settings compatibility
+bool getAudioEnabled();
+void toggleAudioEnabled();
+int getVolume();
+void setVolume(int volume);
+bool getSoundEffectsEnabled();
+void toggleSoundEffectsEnabled();

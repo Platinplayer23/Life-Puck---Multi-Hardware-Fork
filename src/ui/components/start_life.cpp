@@ -26,6 +26,12 @@ int max_life;
 int small_step;
 int large_step;
 
+// Function to get the maximum life limit
+int get_max_life_limit()
+{
+  return 9999; // Maximum value that can be entered
+}
+
 // Shared input state struct
 struct SharedInputState
 {
@@ -70,6 +76,64 @@ void shared_ta_event_cb(lv_event_t *e)
     int value = atoi(lv_textarea_get_text(state->ta));
     if (value >= 0 && value < 10000)
     {
+      // Check if this is the max_life variable and limit it to the actual maximum
+      if (state->current_var == &max_life)
+      {
+        extern int get_max_life_limit();
+        int max_limit = get_max_life_limit();
+        if (value > max_limit)
+        {
+          value = max_limit;
+          // Update the textarea with the corrected value
+          char buf[16];
+          snprintf(buf, sizeof(buf), "%d", value);
+          lv_textarea_set_text(state->ta, buf);
+        }
+      }
+      // Check if this is a step variable and limit it to the actual maximum
+      else if (state->current_var == &small_step || state->current_var == &large_step)
+      {
+        if (value > 9999)
+        {
+          value = 9999;
+          // Update the textarea with the corrected value
+          char buf[16];
+          snprintf(buf, sizeof(buf), "%d", value);
+          lv_textarea_set_text(state->ta, buf);
+        }
+      }
+      
+      *(state->current_var) = value;
+      char buf[16];
+      snprintf(buf, sizeof(buf), "%d", value);
+      lv_label_set_text(state->current_label, buf);
+    }
+  }
+  else if (code == LV_EVENT_READY && state->current_var && state->current_label)
+  {
+    // Final validation when user presses OK
+    int value = atoi(lv_textarea_get_text(state->ta));
+    if (value >= 0) // Allow all positive values, but validate against maximums
+    {
+      // Check if this is the max_life variable and limit it to the actual maximum
+      if (state->current_var == &max_life)
+      {
+        extern int get_max_life_limit();
+        int max_limit = get_max_life_limit();
+        if (value > max_limit)
+        {
+          value = max_limit;
+        }
+      }
+      // Check if this is a step variable and limit it to the actual maximum
+      else if (state->current_var == &small_step || state->current_var == &large_step)
+      {
+        if (value > 9999)
+        {
+          value = 9999;
+        }
+      }
+      
       *(state->current_var) = value;
       char buf[16];
       snprintf(buf, sizeof(buf), "%d", value);
@@ -103,9 +167,22 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl[] = {
 static void handle_save()
 {
   printf("Save button clicked\n");
+  
+  // Check if max_life changed
+  int old_max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
+  bool max_life_changed = (old_max_life != max_life);
+  
   player_store.putInt(KEY_LIFE_MAX, max_life);
   player_store.putInt(KEY_LIFE_STEP_SMALL, small_step);
   player_store.putInt(KEY_LIFE_STEP_LARGE, large_step);
+  
+  // Reset life counter if max_life was changed
+  if (max_life_changed)
+  {
+    resetActiveCounter();
+    printf("[Start Life] Max life changed from %d to %d, resetting life counter\n", old_max_life, max_life);
+  }
+  
   int player_mode = player_store.getInt(KEY_PLAYER_MODE, PLAYER_SINGLE);
   if (player_mode == PLAYER_MODE_ONE_PLAYER)
   {

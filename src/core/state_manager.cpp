@@ -42,3 +42,30 @@ String StateStore::getString(const char *key, const char *defaultValue)
 {
   return nvs.getString(key, defaultValue);
 }
+
+// Timer settings functions
+bool getTimerEnabled() {
+    return player_store.getInt("timer_enabled", 1) != 0; // Default: enabled
+}
+
+void toggleTimerEnabled() {
+    bool current = getTimerEnabled();
+    player_store.putInt("timer_enabled", current ? 0 : 1);
+}
+
+int getTimerDuration() {
+    return player_store.getInt("timer_duration", 10); // Default: 10 minutes
+}
+
+void setTimerDuration(int duration) {
+    player_store.putInt("timer_duration", duration);
+}
+
+bool getTimerWarningEnabled() {
+    return player_store.getInt("timer_warning_enabled", 1) != 0; // Default: enabled
+}
+
+void toggleTimerWarningEnabled() {
+    bool current = getTimerWarningEnabled();
+    player_store.putInt("timer_warning_enabled", current ? 0 : 1);
+}
