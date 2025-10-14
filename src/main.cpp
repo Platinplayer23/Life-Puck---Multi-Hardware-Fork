@@ -29,6 +29,7 @@
 #include "hardware/display/lvgl_driver.h"
 #include "hardware/touch/touch_cst816.h"
 #include "hardware/system/battery_state.h"
+#include "hardware/audio/simple_audio.h"
 
 // ============================================
 // UI Layer
@@ -124,6 +125,10 @@ void setup()
     // System monitoring initialization  
     battery_init();
     power_init();
+    
+    // Audio system initialization
+    simple_audio_init();
+    printf("[MAIN] Audio system initialized\n");
 
     // Initialize presets BEFORE ui_init()!
     init_presets();
@@ -135,7 +140,7 @@ void setup()
     player2_life = preset.starting_life;
 
     // Initialize user interface
-    ui_init(); 
+    ui_init();
     
     // Check if touch calibration confirmation is needed after boot
     if (needsTouchCalibrationConfirmation()) {

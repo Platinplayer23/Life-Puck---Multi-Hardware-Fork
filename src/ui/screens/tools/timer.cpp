@@ -18,6 +18,7 @@
 // Data Layer
 // ============================================
 #include "data/constants.h"
+#include "hardware/audio/simple_audio.h"
 
 lv_obj_t *timer_container = nullptr;
 static lv_obj_t *timer_label = nullptr;
@@ -73,6 +74,11 @@ static void timer_tick_cb(lv_timer_t *t)
     
     if (current_timer_mode == TIMER_MODE_COUNTDOWN && elapsed_seconds >= round_time_seconds) {
       timer_running = false;
+      
+      // *** AUDIO NOTIFICATION: Timer reached zero! ***
+      printf("[Timer] Countdown finished - playing notification sound\n");
+      // Play selected timer finish sound
+      simple_audio_play_sound(simple_audio_get_timer_sound());
     }
     
     update_timer_label();

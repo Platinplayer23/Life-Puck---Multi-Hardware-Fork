@@ -35,6 +35,7 @@
 // Data Layer
 // ============================================
 #include "data/constants.h"
+#include "hardware/audio/simple_audio.h"
 
 
 extern lv_obj_t *settings_menu;
@@ -105,7 +106,7 @@ void renderSettingsOverlay()
   }
 
   static lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, 60, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST}; // Einfaches Grid
+  static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, 50, 50, 50, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST}; // Timer sound button added
   lv_obj_set_grid_dsc_array(settings_menu, col_dsc, row_dsc);
   lv_obj_set_layout(settings_menu, LV_LAYOUT_GRID);
   lv_obj_set_scrollbar_mode(settings_menu, LV_SCROLLBAR_MODE_AUTO);
@@ -354,23 +355,96 @@ void renderSettingsOverlay()
     }, LV_EVENT_CLICKED, NULL);
   }
 
-  // Edit Presets Button (Row 6, Left)
+  // Audio Enable/Disable Button (Row 6, Left)
+  bool audio_enabled = simple_audio_is_enabled();
+  lv_obj_t *btn_audio_toggle = lv_btn_create(settings_menu);
+  lv_obj_set_size(btn_audio_toggle, 120, 50);
+  lv_obj_set_style_bg_color(btn_audio_toggle, (audio_enabled ? LIGHTNING_BLUE_COLOR : GRAY_COLOR), LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_audio_toggle, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 6, 1);
+  lv_obj_t *lbl_audio = lv_label_create(btn_audio_toggle);
+  lv_label_set_text(lbl_audio, (audio_enabled ? "Audio On" : "Audio Off"));
+  lv_obj_set_style_text_font(lbl_audio, &lv_font_montserrat_18, 0);
+  lv_obj_center(lbl_audio);
+  lv_obj_add_event_cb(btn_audio_toggle, [](lv_event_t *e)
+                      {
+    lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
+    lv_obj_t *label = lv_obj_get_child(btn, 0);
+    bool current = simple_audio_is_enabled();
+    bool new_mode = !current;
+    simple_audio_set_enabled(new_mode);
+    lv_label_set_text(label, (new_mode ? "Audio On" : "Audio Off"));
+    lv_obj_set_style_bg_color(btn, (new_mode ? LIGHTNING_BLUE_COLOR : GRAY_COLOR), LV_PART_MAIN);
+    // No click sound for audio toggle
+  }, LV_EVENT_CLICKED, NULL);
+
+  // Audio Volume Button (Row 6, Right)
+  int current_volume = simple_audio_get_volume();
+  lv_obj_t *btn_audio_volume = lv_btn_create(settings_menu);
+  lv_obj_set_size(btn_audio_volume, 120, 50);
+  lv_obj_set_style_bg_color(btn_audio_volume, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_audio_volume, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 6, 1);
+  lv_obj_t *lbl_volume = lv_label_create(btn_audio_volume);
+  char volume_text[16];
+  snprintf(volume_text, sizeof(volume_text), "Vol: %d", current_volume);
+  lv_label_set_text(lbl_volume, volume_text);
+  lv_obj_set_style_text_font(lbl_volume, &lv_font_montserrat_18, 0);
+  lv_obj_center(lbl_volume);
+  lv_obj_add_event_cb(btn_audio_volume, [](lv_event_t *e)
+                      {
+    lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
+    lv_obj_t *label = lv_obj_get_child(btn, 0);
+    int current = simple_audio_get_volume();
+    int new_volume = (current + 3) % 22; // Cycle through 0-21 in steps of 3
+    if (new_volume == 0) new_volume = 1; // Skip 0, go to 1
+    simple_audio_set_volume(new_volume);
+    char volume_text[16];
+    snprintf(volume_text, sizeof(volume_text), "Vol: %d", new_volume);
+    lv_label_set_text(label, volume_text);
+    // Play volume preview sound
+    simple_audio_play_sound(SOUND_SUCCESS);
+  }, LV_EVENT_CLICKED, NULL);
+
+  // Timer Sound Button (Row 7, Left)
+  sound_type_t current_timer_sound = simple_audio_get_timer_sound();
+  lv_obj_t *btn_timer_sound = lv_btn_create(settings_menu);
+  lv_obj_set_size(btn_timer_sound, 120, 50);
+  lv_obj_set_style_bg_color(btn_timer_sound, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_timer_sound, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 7, 1);
+  lv_obj_t *lbl_timer_sound = lv_label_create(btn_timer_sound);
+  const char* sound_names[] = {"Sound 1", "Sound 2", "Sound 3", "Sound 4"};
+  lv_label_set_text(lbl_timer_sound, sound_names[current_timer_sound]);
+  lv_obj_set_style_text_font(lbl_timer_sound, &lv_font_montserrat_18, 0);
+  lv_obj_center(lbl_timer_sound);
+  lv_obj_add_event_cb(btn_timer_sound, [](lv_event_t *e)
+                      {
+    lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
+    lv_obj_t *label = lv_obj_get_child(btn, 0);
+    sound_type_t current = simple_audio_get_timer_sound();
+    sound_type_t next = (sound_type_t)((current + 1) % 4); // Cycle through 0-3
+    simple_audio_set_timer_sound(next);
+    const char* sound_names[] = {"Sound 1", "Sound 2", "Sound 3", "Sound 4"};
+    lv_label_set_text(label, sound_names[next]);
+    // Play preview of new sound
+    simple_audio_play_sound(next);
+  }, LV_EVENT_CLICKED, NULL);
+
+  // Edit Presets Button (Row 7, Right)
   lv_obj_t *btn_edit_presets = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_edit_presets, 120, 50); // Zurück zu normal size
+  lv_obj_set_size(btn_edit_presets, 120, 50);
   lv_obj_set_style_bg_color(btn_edit_presets, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 6, 1);  // Changed from Row 5 to Row 6
+  lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 7, 1);
   lv_obj_t *lbl_edit = lv_label_create(btn_edit_presets);
   lv_label_set_text(lbl_edit, "Edit Presets");
-  lv_obj_set_style_text_font(lbl_edit, &lv_font_montserrat_18, 0);  // Zurück zu normal font
+  lv_obj_set_style_text_font(lbl_edit, &lv_font_montserrat_18, 0);
   lv_obj_center(lbl_edit);
   lv_obj_add_event_cb(btn_edit_presets, [](lv_event_t *e)
                       { renderMenu(MENU_PRESET_EDITOR); }, LV_EVENT_CLICKED, NULL);
 
-  // Touch Calibration Button (Row 6, Right) 
+  // Touch Calibration Button (Row 8, Left) 
   lv_obj_t *btn_touch_cal = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_touch_cal, 120, 50); // Zurück zu normal size
+  lv_obj_set_size(btn_touch_cal, 120, 50);
   lv_obj_set_style_bg_color(btn_touch_cal, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 6, 1);  // Changed from Row 5 to Row 6
+  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 8, 1);
   lv_obj_t *lbl_touch_cal = lv_label_create(btn_touch_cal);
   lv_label_set_text(lbl_touch_cal, "Touch Cal");
   lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_18, 0); // Zurück zu normal font
@@ -381,7 +455,7 @@ void renderSettingsOverlay()
   // *** SCROLL-FIX: Große unsichtbare Spacer-Komponente für Scrolling ***
   lv_obj_t *spacer = lv_obj_create(settings_menu);
   lv_obj_set_size(spacer, 10, 200);  // 200px hoch für Scrolling
-  lv_obj_set_grid_cell(spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 7, 1);  // Row 7, spanning both columns
+  lv_obj_set_grid_cell(spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 9, 1);  // Row 9, spanning both columns
   lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);  // Unsichtbar
   lv_obj_set_style_border_opa(spacer, LV_OPA_TRANSP, 0);  // Keine Border
   lv_obj_clear_flag(spacer, LV_OBJ_FLAG_CLICKABLE);  // Nicht klickbar
