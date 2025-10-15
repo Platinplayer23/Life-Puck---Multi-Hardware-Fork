@@ -31,6 +31,7 @@
 #include "ui/screens/settings/touch_calibration.h"
 #include "ui/screens/settings/audio_settings.h"
 #include "ui/screens/settings/timer_settings.h"
+#include "ui/screens/settings/power_settings.h"
 #include "ui/screens/tools/timer.h"
 #include "ui/screens/tools/dice_coin.h"
 #include "ui/screens/menu/preset_editor.h"
@@ -275,7 +276,7 @@ void renderDiceListMenu() {
   
   lv_obj_t *btn_back = lv_btn_create(dice_list_menu);
   lv_obj_set_size(btn_back, 160, 40);
-  lv_obj_set_style_bg_color(btn_back, lv_color_hex(0x444444), 0);
+  lv_obj_set_style_bg_color(btn_back, lv_color_white(), 0);
   lv_obj_set_style_margin_top(btn_back, 10, 0);
   lv_obj_add_event_cb(btn_back, [](lv_event_t *e) {
     current_menu_page = 1;
@@ -283,7 +284,7 @@ void renderDiceListMenu() {
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_back = lv_label_create(btn_back);
   lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
-  lv_obj_set_style_text_color(lbl_back, lv_color_white(), 0);
+  lv_obj_set_style_text_color(lbl_back, lv_color_black(), 0);
   lv_obj_center(lbl_back);
   
   currentMenu = MENU_DICE_LIST;
@@ -380,7 +381,7 @@ void renderPresetListMenu() {
   
   lv_obj_t *btn_back = lv_btn_create(preset_list_menu);
   lv_obj_set_size(btn_back, 160, 40);
-  lv_obj_set_style_bg_color(btn_back, lv_color_hex(0x444444), 0);
+  lv_obj_set_style_bg_color(btn_back, lv_color_white(), 0);
   lv_obj_set_style_margin_top(btn_back, 10, 0);
   lv_obj_add_event_cb(btn_back, [](lv_event_t *e) {
     current_menu_page = 0;
@@ -388,7 +389,7 @@ void renderPresetListMenu() {
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_back = lv_label_create(btn_back);
   lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
-  lv_obj_set_style_text_color(lbl_back, lv_color_white(), 0);
+  lv_obj_set_style_text_color(lbl_back, lv_color_black(), 0);
   lv_obj_center(lbl_back);
   
   currentMenu = MENU_PRESET_LIST;
@@ -590,6 +591,11 @@ void renderMenu(MenuState menuType, bool animate_menu)
     renderTimerSettingsMenu();
     currentMenu = MENU_TIMER_SETTINGS;
     break;
+  case MENU_POWER_SETTINGS:
+    teardownPowerSettingsMenu();
+    renderPowerSettingsMenu();
+    currentMenu = MENU_POWER_SETTINGS;
+    break;
   case MENU_NONE:
   default:
     showLifeScreen();
@@ -665,6 +671,7 @@ void teardownAllMenus()
   teardownTouchCalibrationScreen();
   teardownAudioSettingsMenu();
   teardownTimerSettingsMenu();
+  teardownPowerSettingsMenu();
 }
 
 void teardownContextualMenuOverlay()

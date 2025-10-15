@@ -4,10 +4,11 @@
  */
 
 #include "core/state_manager.h"
+#include "data/constants.h"
 #include <ArduinoNvs.h>
 
 /// Global instance for player/game state storage
-StateStore player_store("player");
+StateStore player_store(PLAYER_STORE);
 
 // StateStore method implementations
 StateStore::StateStore(const char *ns) : nsName(ns)

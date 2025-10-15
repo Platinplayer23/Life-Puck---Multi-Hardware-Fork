@@ -44,7 +44,8 @@ enum MenuState
   MENU_PRESET_EDITOR,    // Preset Editor
   MENU_TOUCH_CALIBRATION, // NEW: Touch Calibration
   MENU_AUDIO_SETTINGS,   // NEW: Audio Settings Submenu
-  MENU_TIMER_SETTINGS    // NEW: Timer Settings Submenu
+  MENU_TIMER_SETTINGS,   // NEW: Timer Settings Submenu
+  MENU_POWER_SETTINGS    // NEW: Power Settings Submenu
 };
 
 enum ContextualQuadrant

@@ -95,7 +95,7 @@ void teardownBrightnessOverlay()
     }
 }
 
-void renderBrightnessOverlay()
+void renderBrightnessOverlay(MenuState return_menu)
 {
     ensure_brightness_loaded(); // Make sure brightness is loaded from NVS
 
@@ -126,7 +126,10 @@ void renderBrightnessOverlay()
     lv_obj_center(lbl_back);
     lv_obj_set_style_text_color(lbl_back, lv_color_black(), 0);
     lv_obj_add_event_cb(btn_back, [](lv_event_t *e)
-                      { renderMenu(MENU_SETTINGS); }, LV_EVENT_CLICKED, NULL);
+                      { 
+                        MenuState *return_menu_ptr = (MenuState*)lv_event_get_user_data(e);
+                        renderMenu(*return_menu_ptr);
+                      }, LV_EVENT_CLICKED, (void*)&return_menu);
 
     // Top label
     lv_obj_t *label = lv_label_create(brightness_control);

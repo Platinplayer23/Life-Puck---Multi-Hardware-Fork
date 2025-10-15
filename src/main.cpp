@@ -29,6 +29,7 @@
 #include "hardware/display/lvgl_driver.h"
 #include "hardware/touch/touch_cst816.h"
 #include "hardware/system/battery_state.h"
+#include "hardware/system/power_management.h"
 #include "hardware/audio/simple_audio.h"
 
 // ============================================
@@ -124,20 +125,27 @@ void setup()
 
     // System monitoring initialization  
     battery_init();
-    power_init();
     
     // Audio system initialization
     simple_audio_init();
     printf("[MAIN] Audio system initialized\n");
 
-    // Initialize presets BEFORE ui_init()!
+    // Initialize presets BEFORE ui_init()! (This also initializes NVS)
     init_presets();
     load_preset();
     
     // Set initial life values from current preset
+    printf("[MAIN] Getting preset from get_preset()\n");
     TCGPreset preset = get_preset();
+    printf("[MAIN] Got preset: name='%s', starting_life=%d\n", preset.name, preset.starting_life);
+    printf("[MAIN] Setting player1_life to %d\n", preset.starting_life);
     player1_life = preset.starting_life;
+    printf("[MAIN] Setting player2_life to %d\n", preset.starting_life);
     player2_life = preset.starting_life;
+    printf("[MAIN] Life values set successfully\n");
+    
+    // Power management initialization (after NVS is initialized)
+    power_management_init();
 
     // Wait for display to fully initialize before showing UI
     delay(10); // Give display time to settle completely
@@ -175,6 +183,7 @@ void loop()
     Lvgl_Loop();
     Touch_Loop();
     power_loop();
+    power_check_inactivity(); // Check and apply power modes
     
     // Game mode specific processing
     if (life_counter_mode == PLAYER_MODE_ONE_PLAYER) {

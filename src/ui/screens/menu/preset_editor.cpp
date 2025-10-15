@@ -163,14 +163,14 @@ void renderPresetEditorMenu() {
   
   lv_obj_t *btn_back = lv_btn_create(preset_editor_menu);
   lv_obj_set_size(btn_back, 160, 40);
-  lv_obj_set_style_bg_color(btn_back, lv_color_hex(0x444444), 0);
+  lv_obj_set_style_bg_color(btn_back, lv_color_white(), 0);
   lv_obj_set_style_margin_top(btn_back, 15, 0);
   lv_obj_add_event_cb(btn_back, [](lv_event_t *e) {
     renderMenu(MENU_SETTINGS);
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_back = lv_label_create(btn_back);
   lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
-  lv_obj_set_style_text_color(lbl_back, lv_color_white(), 0);
+  lv_obj_set_style_text_color(lbl_back, lv_color_black(), 0);
   lv_obj_center(lbl_back);
 }
 

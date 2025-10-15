@@ -1,5 +1,6 @@
 #include "touch_cst816.h"
 #include "board_config.h"
+#include "hardware/system/power_management.h"
 
 
 struct CST816_Touch touch_data = {0};
@@ -165,6 +166,9 @@ uint8_t Touch_Read_Data(void) {
     /* Fill coordinates */
     touch_data.x = ((buf[2] & 0x0F) << 8) + buf[3];               
     touch_data.y = ((buf[4] & 0x0F) << 8) + buf[5];
+    
+    // Note: Touch activity reset is now handled by LVGL touch events
+    // to avoid I2C conflicts with the touch controller
       
     interrupts(); 
   }
@@ -175,8 +179,6 @@ void example_touchpad_read(void){
   Touch_Read_Data();
   if (touch_data.gesture != NONE ||  touch_data.points != 0x00) {
       printf("Touch : X=%u Y=%u points=%d\r\n",  touch_data.x , touch_data.y,touch_data.points);
-  } else {
-      // data->state = LV_INDEV_STATE_REL;
   }
 }
 

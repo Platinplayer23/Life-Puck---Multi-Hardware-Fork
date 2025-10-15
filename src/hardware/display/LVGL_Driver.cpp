@@ -1,4 +1,5 @@
 #include "lvgl_driver.h"
+#include "hardware/system/power_management.h"
 
 static lv_display_t *display;
 static lv_indev_t *indev;
@@ -40,6 +41,23 @@ void Lvgl_Display_Flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
 // LVGL v9 touchpad read callback with SCALING CORRECTION
 void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data) {
     Touch_Read_Data();
+    
+    // Reset inactivity timer on touch (after Touch_Read_Data to avoid I2C conflicts)
+    if (touch_data.points != 0) {
+        power_reset_inactivity_timer();
+        
+        // Ignore touch events for a short time after waking from sleep/dim
+        if (power_should_ignore_touch()) {
+            // Block touch completely by clearing touch data and marking as released
+            touch_data.points = 0;
+            touch_data.gesture = NONE;
+            data->state = LV_INDEV_STATE_RELEASED;
+            data->point.x = 0;
+            data->point.y = 0;
+            return;
+        }
+    }
+    
     if (touch_data.points != 0) {
         // TOUCH CALIBRATION - Apply both scaling AND offset
         float scale_x = g_touch_scale_x;   // From calibration or default 0.85f

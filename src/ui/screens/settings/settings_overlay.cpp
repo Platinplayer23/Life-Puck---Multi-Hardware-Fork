@@ -105,7 +105,7 @@ void renderSettingsOverlay()
       }
     }, LV_EVENT_ALL, NULL);
 
-  // Grid Layout: 2 columns, 6 rows
+  // Grid Layout: 2 columns, 6 rows (Brightness moved to Power Settings)
   static lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   lv_obj_set_grid_dsc_array(settings_menu, col_dsc, row_dsc);
@@ -160,11 +160,23 @@ void renderSettingsOverlay()
   lv_obj_add_event_cb(btn_timer_settings, [](lv_event_t *e)
                       { renderMenu(MENU_TIMER_SETTINGS); }, LV_EVENT_CLICKED, NULL);
 
-  // Touch Calibration button (Row 3, Col 0)
+  // Power Settings Submenu (Row 3, Col 0)
+  lv_obj_t *btn_power_settings = lv_btn_create(settings_menu);
+  lv_obj_set_size(btn_power_settings, 140, 50);
+  lv_obj_set_style_bg_color(btn_power_settings, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_power_settings, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 3, 1);
+  lv_obj_t *lbl_power_settings = lv_label_create(btn_power_settings);
+  lv_label_set_text(lbl_power_settings, "Power");
+  lv_obj_set_style_text_font(lbl_power_settings, &lv_font_montserrat_20, 0);
+  lv_obj_center(lbl_power_settings);
+  lv_obj_add_event_cb(btn_power_settings, [](lv_event_t *e)
+                      { renderMenu(MENU_POWER_SETTINGS); }, LV_EVENT_CLICKED, NULL);
+
+  // Touch Calibration button (Row 4, Col 0)
   lv_obj_t *btn_touch_cal = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_touch_cal, 120, 50);
   lv_obj_set_style_bg_color(btn_touch_cal, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 3, 1);
+  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
   lv_obj_t *lbl_touch_cal = lv_label_create(btn_touch_cal);
   lv_label_set_text(lbl_touch_cal, "Touch Cal");
   lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_20, 0);
@@ -172,34 +184,22 @@ void renderSettingsOverlay()
   lv_obj_add_event_cb(btn_touch_cal, [](lv_event_t *e)
                       { renderMenu(MENU_TOUCH_CALIBRATION); }, LV_EVENT_CLICKED, NULL);
 
-  // Start Life button (Row 3, Col 1)
+  // Start Life button (Row 4, Col 1)
   lv_obj_t *btn_life = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_life, 120, 50);
   lv_obj_set_style_bg_color(btn_life, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_life, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 3, 1);
+  lv_obj_set_grid_cell(btn_life, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 4, 1);
   lv_obj_t *lbl_life = lv_label_create(btn_life);
   lv_label_set_text(lbl_life, "Start Life");
   lv_obj_set_style_text_font(lbl_life, &lv_font_montserrat_20, 0);
   lv_obj_center(lbl_life);
   lv_obj_add_event_cb(btn_life, btn_life_event_cb, LV_EVENT_CLICKED, NULL);
 
-  // Brightness button (Row 4, Col 0)
-  lv_obj_t *btn_brightness = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_brightness, 120, 50);
-  lv_obj_set_style_bg_color(btn_brightness, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_brightness, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
-  lv_obj_add_event_cb(btn_brightness, [](lv_event_t *e)
-                      { renderMenu(MENU_BRIGHTNESS); }, LV_EVENT_CLICKED, NULL);
-  lv_obj_t *lbl_brightness = lv_label_create(btn_brightness);
-  lv_label_set_text(lbl_brightness, "Brightness");
-  lv_obj_set_style_text_font(lbl_brightness, &lv_font_montserrat_20, 0);
-  lv_obj_center(lbl_brightness);
-
-  // Edit Presets button (Row 4, Col 1)
+  // Edit Presets button (Row 5, Col 0)
   lv_obj_t *btn_edit_presets = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_edit_presets, 120, 50);
   lv_obj_set_style_bg_color(btn_edit_presets, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 4, 1);
+  lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 5, 1);
   lv_obj_t *lbl_edit_presets = lv_label_create(btn_edit_presets);
   lv_label_set_text(lbl_edit_presets, "Edit Presets");
   lv_obj_set_style_text_font(lbl_edit_presets, &lv_font_montserrat_20, 0);

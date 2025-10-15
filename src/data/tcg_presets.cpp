@@ -89,11 +89,17 @@ void init_default_presets() {
  * initializes with factory defaults. This is called during system startup.
  */
 void init_presets() {
+    printf("[Presets] Starting init_presets()\n");
+    
     // First load defaults (fallback)
+    printf("[Presets] Calling init_default_presets()\n");
     init_default_presets();
+    printf("[Presets] init_default_presets() completed\n");
     
     // Then try to overwrite from storage
+    printf("[Presets] Starting storage loop\n");
     for (int i = 0; i < 10; i++) {
+        printf("[Presets] Processing preset %d\n", i);
         char key_name[32], key_life[32], key_small[32], key_large[32];
         
         snprintf(key_name, sizeof(key_name), "preset_%d_name", i);
@@ -101,19 +107,29 @@ void init_presets() {
         snprintf(key_small, sizeof(key_small), "preset_%d_small", i);
         snprintf(key_large, sizeof(key_large), "preset_%d_large", i);
         
+        printf("[Presets] Getting stored name for preset %d\n", i);
         String stored_name = player_store.getString(key_name, "");
+        printf("[Presets] Stored name: '%s'\n", stored_name.c_str());
         
         if (stored_name.length() > 0) {
+            printf("[Presets] Stored preset found for %d, overwriting default\n", i);
             // Stored preset found - overwrite default
             strncpy(TCG_PRESETS[i].name, stored_name.c_str(), sizeof(TCG_PRESETS[i].name) - 1);
             TCG_PRESETS[i].name[sizeof(TCG_PRESETS[i].name) - 1] = '\0';
             
+            printf("[Presets] Getting stored values for preset %d\n", i);
             TCG_PRESETS[i].starting_life = player_store.getInt(key_life, TCG_PRESETS[i].starting_life);
             TCG_PRESETS[i].small_step = player_store.getInt(key_small, TCG_PRESETS[i].small_step);
             TCG_PRESETS[i].large_step = player_store.getInt(key_large, TCG_PRESETS[i].large_step);
+            printf("[Presets] Preset %d loaded: %s, life=%d, small=%d, large=%d\n", 
+                   i, TCG_PRESETS[i].name, TCG_PRESETS[i].starting_life, 
+                   TCG_PRESETS[i].small_step, TCG_PRESETS[i].large_step);
+        } else {
+            printf("[Presets] No stored preset for %d, keeping default\n", i);
         }
         // If NOT stored, keep the default from init_default_presets()
     }
+    printf("[Presets] init_presets() completed successfully\n");
 }
 
 // ============================================
@@ -126,10 +142,17 @@ void init_presets() {
  * Defaults to preset 0 if no valid index is found.
  */
 void load_preset() {
+    printf("[Presets] Starting load_preset()\n");
+    printf("[Presets] Getting preset_idx from player_store\n");
     current_preset_index = player_store.getInt("preset_idx", 0);
+    printf("[Presets] Got preset_idx: %d\n", current_preset_index);
+    
     if (current_preset_index < 0 || current_preset_index >= TCG_PRESET_COUNT) {
+        printf("[Presets] Invalid preset_idx %d, resetting to 0\n", current_preset_index);
         current_preset_index = 0;
     }
+    printf("[Presets] Final preset_idx: %d\n", current_preset_index);
+    printf("[Presets] load_preset() completed successfully\n");
 }
 
 /**
@@ -159,8 +182,23 @@ void save_preset(int index) {
  * Returns the preset at the current index, or preset 0 as fallback.
  */
 TCGPreset get_preset() {
+    printf("[Presets] Starting get_preset()\n");
+    printf("[Presets] current_preset_index: %d, TCG_PRESET_COUNT: %d\n", current_preset_index, TCG_PRESET_COUNT);
+    
     if (current_preset_index < 0 || current_preset_index >= TCG_PRESET_COUNT) {
+        printf("[Presets] Invalid index, returning TCG_PRESETS[0]\n");
+        printf("[Presets] TCG_PRESETS[0] address: %p\n", &TCG_PRESETS[0]);
         return TCG_PRESETS[0];
     }
-    return TCG_PRESETS[current_preset_index];
+    
+    printf("[Presets] Returning TCG_PRESETS[%d]\n", current_preset_index);
+    printf("[Presets] TCG_PRESETS[%d] address: %p\n", current_preset_index, &TCG_PRESETS[current_preset_index]);
+    printf("[Presets] TCG_PRESETS[%d] name: '%s'\n", current_preset_index, TCG_PRESETS[current_preset_index].name);
+    printf("[Presets] TCG_PRESETS[%d] starting_life: %d\n", current_preset_index, TCG_PRESETS[current_preset_index].starting_life);
+    printf("[Presets] TCG_PRESETS[%d] small_step: %d\n", current_preset_index, TCG_PRESETS[current_preset_index].small_step);
+    printf("[Presets] TCG_PRESETS[%d] large_step: %d\n", current_preset_index, TCG_PRESETS[current_preset_index].large_step);
+    
+    TCGPreset result = TCG_PRESETS[current_preset_index];
+    printf("[Presets] Copied preset - name: '%s', starting_life: %d\n", result.name, result.starting_life);
+    return result;
 }
