@@ -74,6 +74,29 @@ static bool is_initializing = false;
 
 void init_life_counter()
 {
+  // Hide logo when life counter starts
+  printf("[LifeCounter] Starting at %lu ms\n", millis());
+  lv_obj_t *screen = lv_screen_active();
+  printf("[LifeCounter] Screen has %d children at %lu ms\n", lv_obj_get_child_cnt(screen), millis());
+  
+  lv_obj_t *logo_img = lv_obj_get_child(screen, -1); // Get last child (should be logo)
+  printf("[LifeCounter] Last child: %p at %lu ms\n", logo_img, millis());
+  
+  if (logo_img) {
+    printf("[LifeCounter] Child class: %p at %lu ms\n", lv_obj_get_class(logo_img), millis());
+    printf("[LifeCounter] Is image class: %s at %lu ms\n", lv_obj_has_class(logo_img, &lv_image_class) ? "YES" : "NO", millis());
+    
+    if (lv_obj_has_class(logo_img, &lv_image_class)) {
+      lv_obj_add_flag(logo_img, LV_OBJ_FLAG_HIDDEN);
+      lv_obj_del(logo_img); // Actually delete the logo object
+      printf("[LifeCounter] Logo hidden and deleted at %lu ms\n", millis());
+    } else {
+      printf("[LifeCounter] Logo not found or not an image at %lu ms\n", millis());
+    }
+  } else {
+    printf("[LifeCounter] No last child found at %lu ms\n", millis());
+  }
+  
   is_initializing = true;
   teardown_life_counter();
   
@@ -464,7 +487,6 @@ void queue_life_change(int player, int value)
   }
   else if (grouped_change_label == nullptr && !is_initializing)
   {
-    // printf("[queue_life_change] grouped_change_label is NULL!\n");
   }
 }
 

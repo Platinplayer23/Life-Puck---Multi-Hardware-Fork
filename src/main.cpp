@@ -139,6 +139,10 @@ void setup()
     player1_life = preset.starting_life;
     player2_life = preset.starting_life;
 
+    // Wait for display to fully initialize before showing UI
+    delay(10); // Give display time to settle completely
+    printf("[MAIN] Display settled, initializing UI 10ms Delay\n");
+    
     // Initialize user interface
     ui_init();
     

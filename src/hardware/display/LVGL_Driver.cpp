@@ -103,6 +103,12 @@ void Lvgl_Init(void) {
     // Set the flush callback
     lv_display_set_flush_cb(display, Lvgl_Display_Flush);
 
+    // Clear display to black before UI creation to prevent static flash
+    lv_color_t black_color = lv_color_black();
+    lv_obj_t *screen = lv_screen_active();
+    lv_obj_set_style_bg_color(screen, black_color, 0);
+    lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, 0);
+
     // Create an input device
     indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);

@@ -173,7 +173,12 @@ void handle_menu_quadrant(int x, int y)
 
 void init_gesture_handling(lv_obj_t *root_obj)
 {
-  lv_obj_add_event_cb(root_obj, lvgl_gesture_event_handler, LV_EVENT_ALL, NULL);
+  // Only listen to specific events we care about instead of LV_EVENT_ALL for better performance
+  lv_obj_add_event_cb(root_obj, lvgl_gesture_event_handler, LV_EVENT_PRESSED, NULL);
+  lv_obj_add_event_cb(root_obj, lvgl_gesture_event_handler, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(root_obj, lvgl_gesture_event_handler, LV_EVENT_LONG_PRESSED, NULL);
+  lv_obj_add_event_cb(root_obj, lvgl_gesture_event_handler, LV_EVENT_GESTURE, NULL);
+  lv_obj_add_event_cb(root_obj, lvgl_gesture_event_handler, LV_EVENT_RELEASED, NULL);
   lv_indev_set_long_press_time(lv_indev_get_act(), 500);
 }
 

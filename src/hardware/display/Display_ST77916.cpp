@@ -375,6 +375,19 @@ void ST77916_Init() {
   if(!QSPI_Init()){
     printf("ST77916 Failed to be initialized\r\n");
   }
+  
+  // Clear display to black immediately after initialization to prevent colored stripes
+  printf("[LCD] Clearing display to black after initialization\n");
+  uint32_t total_pixels = EXAMPLE_LCD_WIDTH * EXAMPLE_LCD_HEIGHT;
+  uint16_t *black_buffer = (uint16_t*)malloc(total_pixels * sizeof(uint16_t));
+  if (black_buffer) {
+    // Fill buffer with black pixels (RGB565: 0x0000)
+    for (uint32_t i = 0; i < total_pixels; i++) {
+      black_buffer[i] = 0x0000;
+    }
+    LCD_addWindow(0, 0, EXAMPLE_LCD_WIDTH - 1, EXAMPLE_LCD_HEIGHT - 1, black_buffer);
+    free(black_buffer);
+  }
 }
 
 

@@ -77,7 +77,6 @@ public:
     bool isWindowExpired = (now - last_event_time) > grouping_window;
     if (active && isWindowExpired && net_change != 0)
     {
-      // printf("[EventGrouper] update: committing due to rolling window timeout\n");
       int new_life_total = life_total + net_change;
       LifeHistoryEvent evt{net_change, new_life_total, player_id, last_event_time, change_timestamp};
       history.push_back(evt);
@@ -103,7 +102,6 @@ public:
   // Helper: Reset history
   void resetHistory(int base_life)
   {
-    // printf("[EventGrouper] Before reset: history size=%zu, active=%d, net_change=%d, player_id=%d, group_start_time=%u, last_event_time=%u, life_total=%d\n", history.size(), active, net_change, player_id, group_start_time, last_event_time, life_total);
     history.clear();
     active = false;
     net_change = 0;
@@ -111,7 +109,6 @@ public:
     last_event_time = 0;
     change_timestamp = 0;
     life_total = base_life;
-    // printf("[EventGrouper] After reset: history size=%zu, active=%d, net_change=%d, player_id=%d, group_start_time=%u, last_event_time=%u, life_total=%d\n", history.size(), active, net_change, player_id, group_start_time, last_event_time, life_total);
   }
 
 private:

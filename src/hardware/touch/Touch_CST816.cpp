@@ -167,7 +167,6 @@ uint8_t Touch_Read_Data(void) {
     touch_data.y = ((buf[4] & 0x0F) << 8) + buf[5];
       
     interrupts(); 
-    // printf(" points=%d \r\n",touch_data.points);
   }
   return true;
 }

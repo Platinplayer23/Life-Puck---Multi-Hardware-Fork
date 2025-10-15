@@ -87,6 +87,18 @@ static int target_life_p2 = 0;
 // Call this after boot animation to show the two-player life counter
 void init_life_counter_2P()
 {
+  // Hide logo when 2P life counter starts
+  printf("[LifeCounter2P] Starting at %lu ms\n", millis());
+  lv_obj_t *screen = lv_screen_active();
+  lv_obj_t *logo_img = lv_obj_get_child(screen, -1);
+  if (logo_img && lv_obj_has_class(logo_img, &lv_image_class)) {
+    lv_obj_add_flag(logo_img, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_del(logo_img);
+    printf("[LifeCounter2P] Logo hidden and deleted at %lu ms\n", millis());
+  } else {
+    printf("[LifeCounter2P] No logo found at %lu ms\n", millis());
+  }
+  
   is_initializing_2p = true;  // Set flag to indicate initialization is active
   teardown_life_counter_2P(); // Clean up any previous state
   
