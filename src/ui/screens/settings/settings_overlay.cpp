@@ -195,11 +195,11 @@ void renderSettingsOverlay()
   lv_obj_center(lbl_life);
   lv_obj_add_event_cb(btn_life, btn_life_event_cb, LV_EVENT_CLICKED, NULL);
 
-  // Edit Presets button (Row 5, Col 0)
+  // Edit Presets button (Row 3, Col 1)
   lv_obj_t *btn_edit_presets = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_edit_presets, 120, 50);
+  lv_obj_set_size(btn_edit_presets, 140, 50);
   lv_obj_set_style_bg_color(btn_edit_presets, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 5, 1);
+  lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 3, 1);
   lv_obj_t *lbl_edit_presets = lv_label_create(btn_edit_presets);
   lv_label_set_text(lbl_edit_presets, "Edit Presets");
   lv_obj_set_style_text_font(lbl_edit_presets, &lv_font_montserrat_20, 0);
