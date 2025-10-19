@@ -39,6 +39,7 @@
 #include "ui/screens/life/life_counter_two_player.h"
 #include "ui/screens/tools/dice_coin.h"
 #include "ui/screens/settings/touch_calibration.h"
+#include "ui/screens/menu/menu.h"  // For getCurrentMenu() and MENU_TOUCH_CALIBRATION
 #include "ui/helpers/event_grouper.h"
 
 // ============================================
@@ -120,6 +121,10 @@ void setup()
     // GUI system initialization
     Lvgl_Init();
     
+    // === NOTFALL: Touch Calibration Reset ===
+    // UNCOMMENT THIS LINE to force-reset touch calibration to defaults!
+  //resetTouchCalibrationToDefaults();  // ← Remove the //
+    
     // Load saved touch calibration from NVS (after LVGL init)
     loadTouchCalibrationFromNVS();
 
@@ -186,10 +191,13 @@ void loop()
     power_check_inactivity(); // Check and apply power modes
     
     // Game mode specific processing
-    if (life_counter_mode == PLAYER_MODE_ONE_PLAYER) {
-        life_counter_loop();
-    } else if (life_counter_mode == PLAYER_MODE_TWO_PLAYER) {
-        life_counter2p_loop();
+    // Disable life counter during touch calibration to prevent event conflicts
+    if (getCurrentMenu() != MENU_TOUCH_CALIBRATION) {
+        if (life_counter_mode == PLAYER_MODE_ONE_PLAYER) {
+            life_counter_loop();
+        } else if (life_counter_mode == PLAYER_MODE_TWO_PLAYER) {
+            life_counter2p_loop();
+        }
     }
     
     // Clear touch interrupt flag if set

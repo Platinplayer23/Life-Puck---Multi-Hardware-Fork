@@ -45,7 +45,8 @@ enum MenuState
   MENU_TOUCH_CALIBRATION, // NEW: Touch Calibration
   MENU_AUDIO_SETTINGS,   // NEW: Audio Settings Submenu
   MENU_TIMER_SETTINGS,   // NEW: Timer Settings Submenu
-  MENU_POWER_SETTINGS    // NEW: Power Settings Submenu
+  MENU_POWER_SETTINGS,   // NEW: Power Settings Submenu
+  MENU_THEME_SETTINGS    // NEW: Theme Settings Submenu
 };
 
 enum ContextualQuadrant
@@ -79,6 +80,8 @@ enum ContextualQuadrant
 #define KEY_LIFE_STEP_LARGE "life_step_large"
 #define KEY_SHOW_TIMER "show_timer"
 #define KEY_SWIPE_TO_CLOSE "swipe_close"  // NEW
+#define KEY_THEME_MODE "theme_mode"       // NEW: Theme Mode (0=OFF, 1=Automatic, 2=Manual)
+#define KEY_THEME_SELECTION "theme_sel"   // NEW: Theme Selection (0=Default, 1=Yugioh, 2=Magic, 3=Pokemon)
 
 // *** PERSISTENT LIFE VALUES ***
 #define KEY_SAVED_LIFE_P1 "saved_life_p1"    // Single player or Player 1 life
@@ -94,4 +97,20 @@ enum step_size_t
 {
   STEP_SIZE_SMALL = 1,
   STEP_SIZE_LARGE = 2
+};
+
+// Theme System Enums
+enum ThemeMode
+{
+  THEME_MODE_OFF = 0,
+  THEME_MODE_AUTOMATIC = 1,
+  THEME_MODE_MANUAL = 2
+};
+
+enum ThemeSelection
+{
+  THEME_DEFAULT = 0,
+  THEME_YUGIOH = 1,
+  THEME_MAGIC = 2,
+  THEME_POKEMON = 3
 };

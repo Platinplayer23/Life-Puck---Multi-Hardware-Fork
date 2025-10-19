@@ -20,6 +20,7 @@
 // Hardware
 // ============================================
 #include "hardware/system/battery_state.h"
+#include "hardware/touch/touch_cst816.h"
 
 // ============================================
 // UI Screens
@@ -32,6 +33,7 @@
 #include "ui/screens/settings/audio_settings.h"
 #include "ui/screens/settings/timer_settings.h"
 #include "ui/screens/settings/power_settings.h"
+#include "ui/screens/settings/theme_settings.h"
 #include "ui/screens/tools/timer.h"
 #include "ui/screens/tools/dice_coin.h"
 #include "ui/screens/menu/preset_editor.h"
@@ -206,45 +208,60 @@ void renderDiceListMenu() {
   lv_obj_set_flex_align(dice_list_menu, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_scrollbar_mode(dice_list_menu, LV_SCROLLBAR_MODE_AUTO);
   
-  // SWIPE DIREKT AUF DEM MENU
+  // SWIPE TO CLOSE (horizontal right swipe like in Settings)
   bool swipe_enabled = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
   if (swipe_enabled) {
-    static lv_point_t dice_start_point;
-    static bool dice_is_swiping = false;
+    extern CST816_Touch touch_data; // Access RAW touch data for accurate swipe detection
     
     lv_obj_add_event_cb(dice_list_menu, [](lv_event_t *e) {
+      extern CST816_Touch touch_data; // Re-declare inside lambda
+      static lv_point_t start_point;
+      static bool is_swiping = false;
+      
       lv_event_code_t code = lv_event_get_code(e);
       
       if (code == LV_EVENT_PRESSED) {
-        lv_indev_t *indev = lv_indev_get_act();
-        lv_indev_get_point(indev, &dice_start_point);
-        dice_is_swiping = false;
+        // Use RAW coordinates for swipe detection
+        start_point.x = touch_data.x;
+        start_point.y = touch_data.y;
+        is_swiping = false;
+        printf("[Dice] PRESSED at RAW (%d, %d)\n", start_point.x, start_point.y);
       }
       else if (code == LV_EVENT_PRESSING) {
-        lv_indev_t *indev = lv_indev_get_act();
+        // Use RAW coordinates for swipe detection
         lv_point_t point;
-        lv_indev_get_point(indev, &point);
-        int dx = point.x - dice_start_point.x;
-        int dy = point.y - dice_start_point.y;
+        point.x = touch_data.x;
+        point.y = touch_data.y;
+        int dx = point.x - start_point.x;
+        int dy = point.y - start_point.y;
         
+        // Detect horizontal swipe
         if (abs(dx) > 30 && abs(dx) > abs(dy) * 1.5) {
-          dice_is_swiping = true;
+          is_swiping = true;
+          printf("[Dice] SWIPING detected! RAW dx=%d dy=%d\n", dx, dy);
         }
       }
       else if (code == LV_EVENT_RELEASED) {
-        if (dice_is_swiping) {
-          lv_indev_t *indev = lv_indev_get_act();
+        printf("[Dice] RELEASED, is_swiping=%d\n", is_swiping);
+        if (is_swiping) {
+          // Use RAW coordinates for final check
           lv_point_t point;
-          lv_indev_get_point(indev, &point);
-          int dx = point.x - dice_start_point.x;
-          int dy = point.y - dice_start_point.y;
+          point.x = touch_data.x;
+          point.y = touch_data.y;
+          int dx = point.x - start_point.x;
+          int dy = point.y - start_point.y;
           
-          if (dx > 80 && abs(dx) > abs(dy) * 2) {
+          printf("[Dice] Swipe check RAW: dx=%d dy=%d (need dx>80 and dx>dy)\n", dx, dy);
+          
+          // Swipe right threshold - relaxed for round display
+          if (dx > 80 && abs(dx) > abs(dy)) {
+            printf("[Dice] SWIPE CONFIRMED! Closing menu.\n");
             current_menu_page = 1;
             renderMenu(MENU_CONTEXTUAL, false);
             return;
           }
         }
+        is_swiping = false;
       }
     }, LV_EVENT_ALL, NULL);
   }
@@ -304,45 +321,54 @@ void renderPresetListMenu() {
   lv_obj_set_flex_align(preset_list_menu, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_scrollbar_mode(preset_list_menu, LV_SCROLLBAR_MODE_AUTO);
   
-  // SWIPE DIREKT AUF DEM MENU
+  // SWIPE TO CLOSE (horizontal right swipe like in Settings)
   bool swipe_enabled = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
   if (swipe_enabled) {
-    static lv_point_t preset_start_point;
-    static bool preset_is_swiping = false;
+    extern CST816_Touch touch_data; // Access RAW touch data for accurate swipe detection
     
     lv_obj_add_event_cb(preset_list_menu, [](lv_event_t *e) {
+      extern CST816_Touch touch_data; // Re-declare inside lambda
+      static lv_point_t start_point;
+      static bool is_swiping = false;
+      
       lv_event_code_t code = lv_event_get_code(e);
       
       if (code == LV_EVENT_PRESSED) {
-        lv_indev_t *indev = lv_indev_get_act();
-        lv_indev_get_point(indev, &preset_start_point);
-        preset_is_swiping = false;
+        // Use RAW coordinates for swipe detection
+        start_point.x = touch_data.x;
+        start_point.y = touch_data.y;
+        is_swiping = false;
       }
       else if (code == LV_EVENT_PRESSING) {
-        lv_indev_t *indev = lv_indev_get_act();
+        // Use RAW coordinates for swipe detection
         lv_point_t point;
-        lv_indev_get_point(indev, &point);
-        int dx = point.x - preset_start_point.x;
-        int dy = point.y - preset_start_point.y;
+        point.x = touch_data.x;
+        point.y = touch_data.y;
+        int dx = point.x - start_point.x;
+        int dy = point.y - start_point.y;
         
+        // Detect horizontal swipe
         if (abs(dx) > 30 && abs(dx) > abs(dy) * 1.5) {
-          preset_is_swiping = true;
+          is_swiping = true;
         }
       }
       else if (code == LV_EVENT_RELEASED) {
-        if (preset_is_swiping) {
-          lv_indev_t *indev = lv_indev_get_act();
+        if (is_swiping) {
+          // Use RAW coordinates for final check
           lv_point_t point;
-          lv_indev_get_point(indev, &point);
-          int dx = point.x - preset_start_point.x;
-          int dy = point.y - preset_start_point.y;
+          point.x = touch_data.x;
+          point.y = touch_data.y;
+          int dx = point.x - start_point.x;
+          int dy = point.y - start_point.y;
           
-          if (dx > 80 && abs(dx) > abs(dy) * 2) {
+          // Swipe right threshold - relaxed for round display
+          if (dx > 80 && abs(dx) > abs(dy)) {
             current_menu_page = 0;
             renderMenu(MENU_CONTEXTUAL, false);
             return;
           }
         }
+        is_swiping = false;
       }
     }, LV_EVENT_ALL, NULL);
   }
@@ -596,6 +622,11 @@ void renderMenu(MenuState menuType, bool animate_menu)
     renderPowerSettingsMenu();
     currentMenu = MENU_POWER_SETTINGS;
     break;
+  case MENU_THEME_SETTINGS:
+    teardownThemeSettingsMenu();
+    renderThemeSettingsMenu();
+    currentMenu = MENU_THEME_SETTINGS;
+    break;
   case MENU_NONE:
   default:
     showLifeScreen();
@@ -672,6 +703,7 @@ void teardownAllMenus()
   teardownAudioSettingsMenu();
   teardownTimerSettingsMenu();
   teardownPowerSettingsMenu();
+  teardownThemeSettingsMenu();
 }
 
 void teardownContextualMenuOverlay()

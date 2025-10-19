@@ -26,13 +26,15 @@
 #include "data/constants.h"
 #include "data/tcg_presets.h"
 
-
 static lv_obj_t *preset_editor_menu = nullptr;
 static lv_obj_t *preset_editor_swipe_layer = nullptr;
 static lv_obj_t *name_popup = nullptr;
 static lv_obj_t *values_popup = nullptr;
 static lv_obj_t *ta_name = nullptr;
 static lv_obj_t *keyboard = nullptr;
+
+// Keyboard Mode Tracking
+static bool keyboard_letter_mode = true;
 
 struct SharedInputState
 {
@@ -66,6 +68,21 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl[] = {
     LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1,
     LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1, LV_BUTTONMATRIX_CTRL_WIDTH_1};
 
+// Keyboard Layouts
+static const char *btnm_map_letters[] = {
+    "q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "\n",
+    "a", "s", "d", "f", "g", "h", "j", "k", "l", "\n", 
+    "z", "x", "c", "v", "b", "n", "m", "123", "\n",
+    " ", LV_SYMBOL_BACKSPACE, LV_SYMBOL_OK, ""
+};
+
+static const char *btnm_map_numbers[] = {
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "\n",
+    "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "\n",
+    "-", "_", "+", "=", "[", "]", "{", "}", "ABC", "\n",
+    " ", LV_SYMBOL_BACKSPACE, LV_SYMBOL_OK, ""
+};
+
 void renderPresetEditorMenu() {
   if (preset_editor_menu) {
     lv_obj_del(preset_editor_menu);
@@ -88,40 +105,38 @@ void renderPresetEditorMenu() {
   lv_obj_set_flex_align(preset_editor_menu, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_scrollbar_mode(preset_editor_menu, LV_SCROLLBAR_MODE_AUTO);
   
-  // SWIPE DETECTION DIREKT AUF DEM MENU
   bool swipe_enabled = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
   if (swipe_enabled) {
-    static lv_point_t menu_start_point;
-    static bool menu_is_swiping = false;
-    
     lv_obj_add_event_cb(preset_editor_menu, [](lv_event_t *e) {
+      static lv_point_t start_point;
+      static bool is_swiping = false;
+      
       lv_event_code_t code = lv_event_get_code(e);
       
       if (code == LV_EVENT_PRESSED) {
         lv_indev_t *indev = lv_indev_get_act();
-        lv_indev_get_point(indev, &menu_start_point);
-        menu_is_swiping = false;
+        lv_indev_get_point(indev, &start_point);
+        is_swiping = false;
       }
       else if (code == LV_EVENT_PRESSING) {
         lv_indev_t *indev = lv_indev_get_act();
         lv_point_t point;
         lv_indev_get_point(indev, &point);
-        int dx = point.x - menu_start_point.x;
-        int dy = point.y - menu_start_point.y;
+        int dx = point.x - start_point.x;
+        int dy = point.y - start_point.y;
         
-        if (abs(dx) > 30 && abs(dx) > abs(dy) * 1.5) {
-          menu_is_swiping = true;
+        if (dy > 30 && abs(dy) > abs(dx) * 1.5) {
+          is_swiping = true;
         }
       }
       else if (code == LV_EVENT_RELEASED) {
-        if (menu_is_swiping) {
+        if (is_swiping) {
           lv_indev_t *indev = lv_indev_get_act();
           lv_point_t point;
           lv_indev_get_point(indev, &point);
-          int dx = point.x - menu_start_point.x;
-          int dy = point.y - menu_start_point.y;
+          int dy = point.y - start_point.y;
           
-          if (dx > 80 && abs(dx) > abs(dy) * 2) {
+          if (dy > 80) {
             renderMenu(MENU_SETTINGS);
             return;
           }
@@ -177,10 +192,11 @@ void renderPresetEditorMenu() {
 static void show_name_popup(int preset_idx) {
   close_name_popup();
   current_preset_idx = preset_idx;
+  keyboard_letter_mode = true;  // Reset to letters
   
   name_popup = lv_obj_create(lv_scr_act());
   lv_obj_set_size(name_popup, SCREEN_WIDTH, SCREEN_HEIGHT);
-  lv_obj_center(name_popup);
+  lv_obj_align(name_popup, LV_ALIGN_TOP_LEFT, 0, 0);
   lv_obj_set_style_bg_color(name_popup, lv_color_hex(0x000000), 0);
   lv_obj_set_style_border_width(name_popup, 0, 0);
   lv_obj_set_style_radius(name_popup, 0, 0);
@@ -196,20 +212,84 @@ static void show_name_popup(int preset_idx) {
   lv_obj_set_size(ta_name, SCREEN_WIDTH - 40, 50);
   lv_obj_align(ta_name, LV_ALIGN_TOP_MID, 0, 45);
   lv_textarea_set_text(ta_name, TCG_PRESETS[preset_idx].name);
-  lv_textarea_set_max_length(ta_name, 20); // Maximum 20 characters
+  lv_textarea_set_max_length(ta_name, 20);
   lv_textarea_set_one_line(ta_name, true);
   lv_obj_set_style_text_font(ta_name, &lv_font_montserrat_24, 0);
   
-  keyboard = lv_keyboard_create(name_popup);
-  lv_keyboard_set_textarea(keyboard, ta_name);
-  lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
-  lv_obj_set_size(keyboard, SCREEN_WIDTH - 20, 180);
+  // Create Button Matrix Keyboard
+  keyboard = lv_btnmatrix_create(name_popup);
+  lv_btnmatrix_set_map(keyboard, btnm_map_letters);  // Start with letters
+  lv_btnmatrix_set_btn_width(keyboard, 30, 2);  // Space wider
+  lv_btnmatrix_set_btn_width(keyboard, 31, 2);  // Backspace wider
+  lv_btnmatrix_set_btn_width(keyboard, 32, 2);  // Enter wider
+  
+  lv_obj_set_size(keyboard, SCREEN_WIDTH, 180);
   lv_obj_align(keyboard, LV_ALIGN_BOTTOM_MID, 0, -50);
+  lv_obj_set_style_bg_color(keyboard, lv_color_hex(0x2C2C2C), 0);
+  
+  // Event Handler for Button Matrix
+  lv_obj_add_event_cb(keyboard, [](lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+      lv_obj_t *btnm = (lv_obj_t*)lv_event_get_target(e);
+      uint16_t btn_id = lv_btnmatrix_get_selected_btn(btnm);
+      const char *btn_text = lv_btnmatrix_get_btn_text(btnm, btn_id);
+      
+      if (btn_text) {
+        if (strcmp(btn_text, LV_SYMBOL_BACKSPACE) == 0) {
+          // Backspace: Delete last character
+          const char *current_text = lv_textarea_get_text(ta_name);
+          size_t len = strlen(current_text);
+          if (len > 0) {
+            char new_text[21];
+            strncpy(new_text, current_text, len - 1);
+            new_text[len - 1] = '\0';
+            lv_textarea_set_text(ta_name, new_text);
+          }
+        } else if (strcmp(btn_text, LV_SYMBOL_OK) == 0) {
+          // Enter: Go to next step
+          close_name_popup();
+          show_values_popup(current_preset_idx);
+        } else if (strcmp(btn_text, "123") == 0) {
+          // Switch to numbers mode
+          keyboard_letter_mode = false;
+          lv_btnmatrix_set_map(btnm, btnm_map_numbers);
+          lv_btnmatrix_set_btn_width(btnm, 30, 2);  // Space
+          lv_btnmatrix_set_btn_width(btnm, 31, 2);  // Backspace
+          lv_btnmatrix_set_btn_width(btnm, 32, 2);  // Enter
+          printf("[ButtonMatrix] Switched to numbers mode\n");
+        } else if (strcmp(btn_text, "ABC") == 0) {
+          // Switch back to letters mode
+          keyboard_letter_mode = true;
+          lv_btnmatrix_set_map(btnm, btnm_map_letters);
+          lv_btnmatrix_set_btn_width(btnm, 30, 2);  // Space
+          lv_btnmatrix_set_btn_width(btnm, 31, 2);  // Backspace
+          lv_btnmatrix_set_btn_width(btnm, 32, 2);  // Enter
+          printf("[ButtonMatrix] Switched to letters mode\n");
+        } else if (strcmp(btn_text, " ") == 0) {
+          // Add space
+          const char *current_text = lv_textarea_get_text(ta_name);
+          if (strlen(current_text) < 20) {
+            char new_text[22];
+            snprintf(new_text, sizeof(new_text), "%s ", current_text);
+            lv_textarea_set_text(ta_name, new_text);
+          }
+        } else {
+          // Add normal character
+          const char *current_text = lv_textarea_get_text(ta_name);
+          if (strlen(current_text) < 20) {
+            char new_text[22];
+            snprintf(new_text, sizeof(new_text), "%s%s", current_text, btn_text);
+            lv_textarea_set_text(ta_name, new_text);
+          }
+        }
+      }
+    }
+  }, LV_EVENT_ALL, NULL);
   
   lv_obj_add_event_cb(ta_name, [](lv_event_t *ev) {
     lv_event_code_t code = lv_event_get_code(ev);
     if (code == LV_EVENT_VALUE_CHANGED) {
-      // Limit name length to 20 characters
       lv_obj_t *ta_src = (lv_obj_t*)lv_event_get_target(ev);
       const char *text = lv_textarea_get_text(ta_src);
       if (strlen(text) > 20) {
@@ -222,7 +302,6 @@ static void show_name_popup(int preset_idx) {
     else if (code == LV_EVENT_READY) {
       lv_obj_t *ta_src = (lv_obj_t*)lv_event_get_target(ev);
       const char *name = lv_textarea_get_text(ta_src);
-      // Ensure name is max 20 characters
       char limited[21];
       strncpy(limited, name, 20);
       limited[20] = '\0';
@@ -243,7 +322,6 @@ static void show_name_popup(int preset_idx) {
     int idx = (int)(intptr_t)lv_obj_get_user_data(target);
     
     const char *name = lv_textarea_get_text(ta_name);
-    // Ensure name is max 20 characters
     char limited[21];
     strncpy(limited, name, 20);
     limited[20] = '\0';
@@ -292,25 +370,21 @@ static void shared_ta_event_cb(lv_event_t *e)
     int value = atoi(lv_textarea_get_text(state->ta));
     if (value >= 0 && value < 10000)
     {
-      // Check if this is the temp_life variable and limit it to the actual maximum
       if (state->current_var == &temp_life)
       {
         if (value > 9999)
         {
           value = 9999;
-          // Update the textarea with the corrected value
           char buf[16];
           snprintf(buf, sizeof(buf), "%d", value);
           lv_textarea_set_text(state->ta, buf);
         }
       }
-      // Check if this is a step variable and limit it to the actual maximum
       else if (state->current_var == &temp_small || state->current_var == &temp_large)
       {
         if (value > 9999)
         {
           value = 9999;
-          // Update the textarea with the corrected value
           char buf[16];
           snprintf(buf, sizeof(buf), "%d", value);
           lv_textarea_set_text(state->ta, buf);
@@ -325,11 +399,9 @@ static void shared_ta_event_cb(lv_event_t *e)
   }
   else if (code == LV_EVENT_READY && state->current_var && state->current_label)
   {
-    // Final validation when user presses OK
     int value = atoi(lv_textarea_get_text(state->ta));
-    if (value >= 0) // Allow all positive values, but validate against maximums
+    if (value >= 0)
     {
-      // Check if this is the temp_life variable and limit it to the actual maximum
       if (state->current_var == &temp_life)
       {
         if (value > 9999)
@@ -337,7 +409,6 @@ static void shared_ta_event_cb(lv_event_t *e)
           value = 9999;
         }
       }
-      // Check if this is a step variable and limit it to the actual maximum
       else if (state->current_var == &temp_small || state->current_var == &temp_large)
       {
         if (value > 9999)
@@ -469,7 +540,7 @@ static void show_values_popup(int preset_idx) {
   lv_obj_set_style_text_font(shared_input_state.kb, &lv_font_montserrat_24, 0);
   lv_keyboard_set_map(shared_input_state.kb, LV_KEYBOARD_MODE_USER_1, kb_map, kb_ctrl);
   lv_keyboard_set_mode(shared_input_state.kb, LV_KEYBOARD_MODE_USER_1);
-  lv_obj_set_size(shared_input_state.kb, SCREEN_WIDTH - 80, SCREEN_HEIGHT - 150);
+  lv_obj_set_size(shared_input_state.kb, SCREEN_WIDTH, SCREEN_HEIGHT - 150);
   lv_obj_align(shared_input_state.kb, LV_ALIGN_TOP_MID, 0, 80);
   lv_obj_clear_flag(shared_input_state.kb, LV_OBJ_FLAG_SCROLLABLE);
 

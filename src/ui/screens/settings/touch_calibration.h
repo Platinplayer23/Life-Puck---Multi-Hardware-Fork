@@ -1,52 +1,54 @@
 #pragma once
 
-#include <lvgl.h>
+/**
+ * @file touch_calibration.h
+ * @brief Interactive touch calibration system
+ * 
+ * Since I couldn't find any similar approach in existing implementations,
+ * I'm calling this "Suthe's Method" - a zone-based interactive calibration
+ * technique with automatic parameter adjustment.
+ * 
+ * See docs/Suthes_Method_Touch_Calibration.md for full documentation.
+ */
 
 /**
- * @brief Render touch calibration screen
+ * @brief Start the interactive touch calibration process
  * 
- * Creates a full-screen calibration interface that guides the user
- * through a 5-point calibration process with fail-safe mechanisms.
+ * Launches the zone-based calibration interface that automatically
+ * adjusts offset_x, offset_y, scale_x, scale_y (and optionally rotation)
+ * by detecting which zone the user touches and incrementally adjusting
+ * the calibration matrix until convergence.
  */
 void renderTouchCalibrationScreen();
 
 /**
  * @brief Cleanup touch calibration screen
- * 
- * Properly destroys the calibration screen and frees memory.
  */
 void teardownTouchCalibrationScreen();
 
 /**
  * @brief Reset touch calibration to factory defaults
  * 
- * Emergency function to restore default touch settings if calibration
- * goes wrong and device becomes unusable.
+ * Emergency function to restore default touch settings.
  */
 void resetTouchCalibrationToDefaults();
 
-// Emergency BOOT button reset removed - conflicts with ESP32 download mode
+/**
+ * @brief Load and apply saved touch calibration from NVS
+ * 
+ * Called during boot to restore previously calibrated touch settings.
+ */
+void loadTouchCalibrationFromNVS();
 
 /**
  * @brief Check if touch calibration needs confirmation after boot
  * 
- * Call this after UI is initialized to show confirmation dialog if needed.
  * @return true if confirmation dialog should be shown
  */
 bool needsTouchCalibrationConfirmation();
 
 /**
- * @brief Confirm the current touch calibration
- * 
- * Removes the pending confirmation flag, making calibration permanent.
- */
-void confirmTouchCalibration();
-
-/**
  * @brief Render touch calibration confirmation screen
- * 
- * Shows a 10-second countdown dialog asking user to confirm new calibration.
- * Auto-reverts to defaults if no confirmation received.
  */
 void renderTouchCalibrationConfirmation();
 
@@ -56,9 +58,6 @@ void renderTouchCalibrationConfirmation();
 void teardownTouchCalibrationConfirmation();
 
 /**
- * @brief Load and apply saved touch calibration from NVS
- * 
- * Called during boot to restore previously calibrated touch settings.
- * Must be called after LVGL initialization but before UI creation.
+ * @brief Confirm the current touch calibration
  */
-void loadTouchCalibrationFromNVS();
+void confirmTouchCalibration();

@@ -6,6 +6,7 @@
 #include "ui/screens/tools/timer.h"
 #include "ui/screens/life/life_counter.h"
 #include "ui/screens/life/life_counter_two_player.h"
+#include "hardware/touch/touch_cst816.h"
 #include <lvgl.h>
 
 static lv_obj_t *timer_menu = nullptr;
@@ -201,41 +202,50 @@ void renderTimerSettingsMenu()
   // Add swipe-to-close gesture (same as main settings menu)
   bool swipe_enabled = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
   if (swipe_enabled) {
-    static lv_point_t start_point;
-    static bool is_swiping = false;
+    extern CST816_Touch touch_data; // Access RAW touch data for accurate swipe detection
     
     lv_obj_add_event_cb(timer_menu, [](lv_event_t *e) {
+      extern CST816_Touch touch_data; // Re-declare inside lambda
+      static lv_point_t start_point;
+      static bool is_swiping = false;
+      
       lv_event_code_t code = lv_event_get_code(e);
       
       if (code == LV_EVENT_PRESSED) {
-        lv_indev_t *indev = lv_indev_get_act();
-        lv_indev_get_point(indev, &start_point);
+        // Use RAW coordinates for swipe detection
+        start_point.x = touch_data.x;
+        start_point.y = touch_data.y;
         is_swiping = false;
       }
       else if (code == LV_EVENT_PRESSING) {
-        lv_indev_t *indev = lv_indev_get_act();
+        // Use RAW coordinates for swipe detection
         lv_point_t point;
-        lv_indev_get_point(indev, &point);
+        point.x = touch_data.x;
+        point.y = touch_data.y;
         int dx = point.x - start_point.x;
         int dy = point.y - start_point.y;
         
+        // Detect horizontal swipe
         if (abs(dx) > 30 && abs(dx) > abs(dy) * 1.5) {
           is_swiping = true;
         }
       }
       else if (code == LV_EVENT_RELEASED) {
         if (is_swiping) {
-          lv_indev_t *indev = lv_indev_get_act();
+          // Use RAW coordinates for final check
           lv_point_t point;
-          lv_indev_get_point(indev, &point);
+          point.x = touch_data.x;
+          point.y = touch_data.y;
           int dx = point.x - start_point.x;
           int dy = point.y - start_point.y;
           
-          if (dx > 80 && abs(dx) > abs(dy) * 2) {
+          // Swipe right threshold - relaxed for round display
+          if (dx > 80 && abs(dx) > abs(dy)) {
             renderMenu(MENU_SETTINGS);
             return;
           }
         }
+        is_swiping = false;
       }
     }, LV_EVENT_ALL, NULL);
   }

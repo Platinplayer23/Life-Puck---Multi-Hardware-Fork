@@ -17,6 +17,7 @@
 // Hardware
 // ============================================
 #include "hardware/system/battery_state.h"
+#include "hardware/touch/touch_cst816.h"
 
 // ============================================
 // UI Screens
@@ -63,51 +64,60 @@ void renderSettingsOverlay()
   lv_obj_set_scrollbar_mode(settings_menu, LV_SCROLLBAR_MODE_AUTO);
 
   // SWIPE TO CLOSE - Always add handler, but check setting inside
-  static lv_point_t start_point;
-  static bool is_swiping = false;
+  extern CST816_Touch touch_data; // Access RAW touch data for accurate swipe detection
+  
+  lv_obj_add_event_cb(settings_menu, [](lv_event_t *e) {
+    extern CST816_Touch touch_data; // Re-declare inside lambda
+    static lv_point_t start_point;
+    static bool is_swiping = false;
     
-    lv_obj_add_event_cb(settings_menu, [](lv_event_t *e) {
     // Check if swipe is enabled for this specific event
     bool swipe_enabled = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
     if (!swipe_enabled) return; // Exit early if disabled
     
-      lv_event_code_t code = lv_event_get_code(e);
-      
-      if (code == LV_EVENT_PRESSED) {
-        lv_indev_t *indev = lv_indev_get_act();
-      lv_indev_get_point(indev, &start_point);
+    lv_event_code_t code = lv_event_get_code(e);
+    
+    if (code == LV_EVENT_PRESSED) {
+      // Use RAW coordinates for swipe detection
+      start_point.x = touch_data.x;
+      start_point.y = touch_data.y;
       is_swiping = false;
-      }
-      else if (code == LV_EVENT_PRESSING) {
-        lv_indev_t *indev = lv_indev_get_act();
-        lv_point_t point;
-        lv_indev_get_point(indev, &point);
+    }
+    else if (code == LV_EVENT_PRESSING) {
+      // Use RAW coordinates for swipe detection
+      lv_point_t point;
+      point.x = touch_data.x;
+      point.y = touch_data.y;
       int dx = point.x - start_point.x;
       int dy = point.y - start_point.y;
-        
-        if (abs(dx) > 30 && abs(dx) > abs(dy) * 1.5) {
+      
+      // Detect horizontal swipe
+      if (abs(dx) > 30 && abs(dx) > abs(dy) * 1.5) {
         is_swiping = true;
-        }
       }
-      else if (code == LV_EVENT_RELEASED) {
+    }
+    else if (code == LV_EVENT_RELEASED) {
       if (is_swiping) {
-          lv_indev_t *indev = lv_indev_get_act();
-          lv_point_t point;
-          lv_indev_get_point(indev, &point);
+        // Use RAW coordinates for final check
+        lv_point_t point;
+        point.x = touch_data.x;
+        point.y = touch_data.y;
         int dx = point.x - start_point.x;
         int dy = point.y - start_point.y;
-          
-          if (dx > 80 && abs(dx) > abs(dy) * 2) {
-            renderMenu(MENU_CONTEXTUAL, false);
-            return;
-          }
+        
+        // Swipe right threshold - relaxed for round display
+        if (dx > 80 && abs(dx) > abs(dy)) {
+          renderMenu(MENU_CONTEXTUAL, false);
+          return;
         }
       }
-    }, LV_EVENT_ALL, NULL);
+      is_swiping = false;
+    }
+  }, LV_EVENT_ALL, NULL);
 
-  // Grid Layout: 2 columns, 6 rows (Brightness moved to Power Settings)
+  // Grid Layout: 2 columns, 7 rows (added Themes submenu)
   static lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, 50, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   lv_obj_set_grid_dsc_array(settings_menu, col_dsc, row_dsc);
   lv_obj_set_layout(settings_menu, LV_LAYOUT_GRID);
   lv_obj_set_scrollbar_mode(settings_menu, LV_SCROLLBAR_MODE_AUTO);
@@ -172,29 +182,6 @@ void renderSettingsOverlay()
   lv_obj_add_event_cb(btn_power_settings, [](lv_event_t *e)
                       { renderMenu(MENU_POWER_SETTINGS); }, LV_EVENT_CLICKED, NULL);
 
-  // Touch Calibration button (Row 4, Col 0)
-  lv_obj_t *btn_touch_cal = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_touch_cal, 120, 50);
-  lv_obj_set_style_bg_color(btn_touch_cal, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
-  lv_obj_t *lbl_touch_cal = lv_label_create(btn_touch_cal);
-  lv_label_set_text(lbl_touch_cal, "Touch Cal");
-  lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_20, 0);
-  lv_obj_center(lbl_touch_cal);
-  lv_obj_add_event_cb(btn_touch_cal, [](lv_event_t *e)
-                      { renderMenu(MENU_TOUCH_CALIBRATION); }, LV_EVENT_CLICKED, NULL);
-
-  // Start Life button (Row 4, Col 1)
-  lv_obj_t *btn_life = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_life, 120, 50);
-  lv_obj_set_style_bg_color(btn_life, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_life, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 4, 1);
-  lv_obj_t *lbl_life = lv_label_create(btn_life);
-  lv_label_set_text(lbl_life, "Start Life");
-  lv_obj_set_style_text_font(lbl_life, &lv_font_montserrat_20, 0);
-  lv_obj_center(lbl_life);
-  lv_obj_add_event_cb(btn_life, btn_life_event_cb, LV_EVENT_CLICKED, NULL);
-
   // Edit Presets button (Row 3, Col 1)
   lv_obj_t *btn_edit_presets = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_edit_presets, 140, 50);
@@ -207,13 +194,48 @@ void renderSettingsOverlay()
   lv_obj_add_event_cb(btn_edit_presets, [](lv_event_t *e)
                       { renderMenu(MENU_PRESET_EDITOR); }, LV_EVENT_CLICKED, NULL);
 
-  // AMP Button (Row 5, Col 0)
+  // Themes Settings Submenu (Row 4, Col 0) - NEW
+  lv_obj_t *btn_theme_settings = lv_btn_create(settings_menu);
+  lv_obj_set_size(btn_theme_settings, 140, 50);
+  lv_obj_set_style_bg_color(btn_theme_settings, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_theme_settings, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
+  lv_obj_t *lbl_theme_settings = lv_label_create(btn_theme_settings);
+  lv_label_set_text(lbl_theme_settings, "Themes");
+  lv_obj_set_style_text_font(lbl_theme_settings, &lv_font_montserrat_20, 0);
+  lv_obj_center(lbl_theme_settings);
+  lv_obj_add_event_cb(btn_theme_settings, [](lv_event_t *e)
+                      { renderMenu(MENU_THEME_SETTINGS); }, LV_EVENT_CLICKED, NULL);
+
+  // Touch Calibration button (Row 4, Col 1)
+  lv_obj_t *btn_touch_cal = lv_btn_create(settings_menu);
+  lv_obj_set_size(btn_touch_cal, 120, 50);
+  lv_obj_set_style_bg_color(btn_touch_cal, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 4, 1);
+  lv_obj_t *lbl_touch_cal = lv_label_create(btn_touch_cal);
+  lv_label_set_text(lbl_touch_cal, "Touch Cal");
+  lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_20, 0);
+  lv_obj_center(lbl_touch_cal);
+  lv_obj_add_event_cb(btn_touch_cal, [](lv_event_t *e)
+                      { renderMenu(MENU_TOUCH_CALIBRATION); }, LV_EVENT_CLICKED, NULL);
+
+  // Start Life button (Row 5, Col 0)
+  lv_obj_t *btn_life = lv_btn_create(settings_menu);
+  lv_obj_set_size(btn_life, 120, 50);
+  lv_obj_set_style_bg_color(btn_life, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_life, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 5, 1);
+  lv_obj_t *lbl_life = lv_label_create(btn_life);
+  lv_label_set_text(lbl_life, "Start Life");
+  lv_obj_set_style_text_font(lbl_life, &lv_font_montserrat_20, 0);
+  lv_obj_center(lbl_life);
+  lv_obj_add_event_cb(btn_life, btn_life_event_cb, LV_EVENT_CLICKED, NULL);
+
+  // AMP Button (Row 5, Col 1)
   int amp_mode = player_store.getInt(KEY_AMP_MODE, PLAYER_SINGLE);
   bool amp_enabled = (amp_mode == PLAYER_MODE_TWO_PLAYER);
   lv_obj_t *btn_amp = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_amp, 120, 50);
   lv_obj_set_style_bg_color(btn_amp, (amp_enabled ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_amp, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 5, 1);
+  lv_obj_set_grid_cell(btn_amp, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 5, 1);
   lv_obj_t *lbl_amp = lv_label_create(btn_amp);
   lv_label_set_text(lbl_amp, amp_enabled ? "AMP: ON" : "AMP: OFF");
   lv_obj_set_style_text_font(lbl_amp, &lv_font_montserrat_20, 0);
@@ -236,12 +258,12 @@ void renderSettingsOverlay()
                         lv_obj_set_style_bg_color(btn, (amp_enabled ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
                       }, LV_EVENT_CLICKED, NULL);
 
-  // Swipe to Close Button (Row 5, Col 1)
+  // Swipe to Close Button (Row 6, Col 0)
   bool swipe_enabled_btn = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
   lv_obj_t *btn_swipe = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_swipe, 120, 50);
   lv_obj_set_style_bg_color(btn_swipe, (swipe_enabled_btn ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_swipe, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 5, 1);
+  lv_obj_set_grid_cell(btn_swipe, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 6, 1);
   lv_obj_t *lbl_swipe = lv_label_create(btn_swipe);
   lv_label_set_text(lbl_swipe, swipe_enabled_btn ? "Swipe: ON" : "Swipe: OFF");
   lv_obj_set_style_text_font(lbl_swipe, &lv_font_montserrat_20, 0);
@@ -262,18 +284,18 @@ void renderSettingsOverlay()
                         // No need to update event handlers - they check the setting dynamically
   }, LV_EVENT_CLICKED, NULL);
 
-  // Spacer (Row 6, Col 0) - Empty space for scrolling
+  // Spacer (Row 7, Col 0) - Empty space for scrolling
   lv_obj_t *spacer = lv_obj_create(settings_menu);
   lv_obj_set_size(spacer, 120, 50);
-  lv_obj_set_grid_cell(spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 6, 1);
+  lv_obj_set_grid_cell(spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 7, 1);
   lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_opa(spacer, LV_OPA_TRANSP, 0);
   lv_obj_clear_flag(spacer, LV_OBJ_FLAG_CLICKABLE);
 
-  // Extra Spacer for Scrolling (Row 7, spanning both columns)
+  // Extra Spacer for Scrolling (Row 8, spanning both columns)
   lv_obj_t *extra_spacer = lv_obj_create(settings_menu);
   lv_obj_set_size(extra_spacer, 10, 200);  // 200px hoch für Scrolling
-  lv_obj_set_grid_cell(extra_spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 7, 1);  // Row 7, spanning both columns
+  lv_obj_set_grid_cell(extra_spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 8, 1);  // Row 8, spanning both columns
   lv_obj_set_style_bg_opa(extra_spacer, LV_OPA_TRANSP, 0);  // Unsichtbar
   lv_obj_set_style_border_opa(extra_spacer, LV_OPA_TRANSP, 0);  // Keine Border
   lv_obj_clear_flag(extra_spacer, LV_OBJ_FLAG_CLICKABLE);  // Nicht klickbar
