@@ -106,22 +106,22 @@ Map touch sensor coordinates to display coordinates such that:
 ## 🎯 Default Calibration Values
 
 ### Factory Defaults (7-Parameter Matrix)
+**Now defined in `src/config.h` for easy editing:**
 ```cpp
-float your_default_matrix[7] = {
-    0.0f,    // C (offset_x)
-    0.85f,   // A (scale_x)
-    0.0f,    // B (shear_xy)
-    0.0f,    // F (offset_y)
-    0.0f,    // D (shear_yx)
-    1.0f,    // E (scale_y)
-    1.0f     // Divisor
-};
+#define TOUCH_CAL_DEFAULT_OFFSET_X 0.0f
+#define TOUCH_CAL_DEFAULT_SCALE_X 0.85f
+#define TOUCH_CAL_DEFAULT_SHEAR_XY 0.0f
+#define TOUCH_CAL_DEFAULT_OFFSET_Y 0.0f
+#define TOUCH_CAL_DEFAULT_SHEAR_YX 0.0f
+#define TOUCH_CAL_DEFAULT_SCALE_Y 0.90f
+#define TOUCH_CAL_DEFAULT_DIVISOR 1.0f
 ```
 These values provide reasonable touch accuracy on uncalibrated systems:
-- **scale_x = 0.85**: Empirically determined for this hardware
-- **scale_y = 1.0**: No vertical scaling needed
-- **All shear/offset = 0.0**: No distortion compensation
+- **scale_x = 0.85**: Empirically determined for this hardware (horizontal compression)
+- **scale_y = 0.90**: Vertical scaling adjustment (was 1.0, now 0.90 for better accuracy)
+- **All shear/offset = 0.0**: No distortion compensation by default
 - Serve as fallback if calibration is rejected or times out
+- **Can be edited in config.h** without modifying code
 
 ### Calibration Behavior
 - **During Calibration**: Transformation reset to identity matrix (1:1 raw values)
@@ -146,12 +146,17 @@ These values provide reasonable touch accuracy on uncalibrated systems:
 - **Two-Pass System**: ✅ Coarse (fast) → Fine (precise) adjustment for optimal speed and accuracy
 - **Rotation Calibration**: ✅ Optional rotation step for advanced correction
 - **Confirmation Dialog**: ✅ 10-second timeout with Keep/Revert options
+- **Power Management**: ✅ Auto-dim and sleep suspended during calibration (no interruptions)
+- **Centralized Config**: ✅ All calibration defaults in config.h (easy to edit)
+- **Force Reset Flags**: ✅ FORCE_DEFAULT_CALIBRATION to reset to config.h values
 
 ## 📁 Related Files
+- `src/config.h` - **Touch calibration defaults** (edit here to change defaults!)
 - `src/ui/screens/settings/touch_calibration.cpp` - Main calibration implementation
 - `src/ui/screens/settings/touch_calibration.h` - Header with function declarations
-- `src/hardware/display/lvgl_driver.cpp` - Touch transformation application
+- `src/hardware/display/lvgl_driver.cpp` - Touch transformation application (loads defaults from config.h)
 - `src/hardware/touch/touch_cst816.cpp` - Raw touch data acquisition
+- `src/hardware/system/power_management.cpp` - Power suspend during calibration (prevents auto-dim/sleep)
 - `src/data/constants.h` - Screen dimensions and constants
 
 ## 🔍 Implementation Notes

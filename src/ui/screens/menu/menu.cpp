@@ -57,6 +57,9 @@
 #include "data/history.h"
 #include "data/tcg_presets.h"
 #include "data/themes.h"
+// Audio and config for animations
+#include "hardware/audio/simple_audio.h"
+#include "config.h"
 
 lv_obj_t *contextual_menu = nullptr;
 lv_obj_t *settings_menu = nullptr;
@@ -121,7 +124,12 @@ void handleContextualSelection(ContextualQuadrant quadrant)
     case QUADRANT_TR:
       {
         bool heads = flip_coin();
-        show_tcg_result_popup("Coin flip", heads ? "HEADS" : "TAILS");
+        if (ENABLE_COIN_ANIMATION) {
+          extern void animate_coin_flip(bool is_heads);
+          animate_coin_flip(heads);
+        } else {
+          show_tcg_result_popup("Coin flip", heads ? "HEADS" : "TAILS");
+        }
       }
       break;
     case QUADRANT_BL:
@@ -184,15 +192,193 @@ void show_tcg_result_popup(const char* title, const char* result) {
   lv_obj_t *lbl_result = lv_label_create(popup);
   lv_label_set_text(lbl_result, result);
   lv_obj_set_style_text_font(lbl_result, &lv_font_montserrat_40, 0);
+  lv_obj_set_style_text_color(lbl_result, getThemeButtonColor(), 0);  // Match theme color
   lv_obj_center(lbl_result);
   
   lv_timer_t *timer = lv_timer_create([](lv_timer_t *t) {
     lv_obj_t *obj = (lv_obj_t*)lv_timer_get_user_data(t);
     lv_obj_del(obj);
     lv_timer_del(t);
-  }, 2000, nullptr);
+  }, GENERIC_RESULT_HOLD_MS, nullptr);
   lv_timer_set_user_data(timer, popup);
   lv_timer_set_repeat_count(timer, 1);
+}
+
+// ================================
+// Slot-machine style animations
+// ================================
+
+static lv_obj_t *anim_popup = nullptr;
+static lv_obj_t *anim_lbl_title = nullptr;
+static lv_obj_t *anim_lbl_result = nullptr;
+
+static void ensure_anim_popup(const char* title, const char* text)
+{
+  if (anim_popup == nullptr) {
+    anim_popup = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(anim_popup, 180, 150);
+    lv_obj_center(anim_popup);
+    lv_obj_set_style_bg_color(anim_popup, lv_color_hex(0x202020), 0);
+    lv_obj_set_style_border_width(anim_popup, 3, 0);
+    lv_obj_set_style_border_color(anim_popup, getThemeButtonColor(), 0);
+    lv_obj_set_style_radius(anim_popup, 20, 0);
+
+    anim_lbl_title = lv_label_create(anim_popup);
+    lv_obj_set_style_text_color(anim_lbl_title, getThemeButtonColor(), 0);
+    lv_obj_align(anim_lbl_title, LV_ALIGN_TOP_MID, 0, 15);
+
+    anim_lbl_result = lv_label_create(anim_popup);
+    lv_obj_set_style_text_font(anim_lbl_result, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(anim_lbl_result, getThemeButtonColor(), 0);
+    lv_obj_center(anim_lbl_result);
+  }
+
+  if (title) lv_label_set_text(anim_lbl_title, title);
+  if (text) lv_label_set_text(anim_lbl_result, text);
+}
+
+static void close_anim_popup_after(uint32_t delay_ms)
+{
+  if (!anim_popup) return;
+  lv_timer_t *timer = lv_timer_create([](lv_timer_t *t){
+    if (anim_popup) {
+      lv_obj_del(anim_popup);
+    }
+    anim_popup = nullptr;
+    anim_lbl_title = nullptr;
+    anim_lbl_result = nullptr;
+    lv_timer_del(t);
+  }, delay_ms, nullptr);
+  lv_timer_set_repeat_count(timer, 1);
+}
+
+static inline void update_popup_text(const char* text)
+{
+  if (anim_lbl_result) lv_label_set_text(anim_lbl_result, text);
+}
+
+static void animate_popup_bounce()
+{
+  if (!anim_popup || !ANIMATION_SCALE_BOUNCE) return;
+  lv_anim_t a; lv_anim_init(&a);
+  lv_anim_set_var(&a, anim_popup);
+  lv_anim_set_time(&a, 180);
+  lv_anim_set_values(&a, 256, 296); // 100% -> ~116%
+  lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_style_transform_zoom);
+  lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
+  lv_anim_start(&a);
+}
+
+static inline void play_tick_sound()
+{
+  if (ANIMATION_SOUND_TICKS && simple_audio_is_enabled()) {
+    simple_audio_beep(2000, 30);
+  }
+}
+
+static inline void play_result_sound()
+{
+  if (ANIMATION_SOUND_TICKS && simple_audio_is_enabled()) {
+    simple_audio_play_sound(SOUND_SUCCESS);
+  }
+}
+
+// Dice animation state
+static lv_timer_t* dice_animation_timer = nullptr;
+static int dice_animation_cycle = 0;
+static int dice_final_result = 0;
+static int dice_max_sides = 6;
+static uint32_t dice_cycle_delay = 0;
+
+static void dice_animation_tick(lv_timer_t* timer)
+{
+  dice_animation_cycle++;
+
+  if (dice_animation_cycle >= DICE_CYCLES) {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", dice_final_result);
+    update_popup_text(buf);
+    animate_popup_bounce();
+    play_result_sound();
+    lv_timer_del(dice_animation_timer); dice_animation_timer = nullptr;
+    close_anim_popup_after(DICE_RESULT_HOLD_MS);
+    return;
+  }
+
+  int display_num;
+  if (dice_animation_cycle >= DICE_CYCLES - 2) {
+    display_num = dice_final_result;
+  } else {
+    display_num = (esp_random() % dice_max_sides) + 1;
+  }
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%d", display_num);
+  update_popup_text(buf);
+  play_tick_sound();
+
+  dice_cycle_delay += ANIMATION_SLOWDOWN_MS;
+  lv_timer_set_period(timer, dice_cycle_delay);
+}
+
+static void animate_dice_roll(int final_result, int max_sides)
+{
+  dice_final_result = final_result;
+  dice_max_sides = max_sides;
+  dice_animation_cycle = 0;
+  dice_cycle_delay = 30;
+
+  int first = (esp_random() % max_sides) + 1;
+  char buf[16]; snprintf(buf, sizeof(buf), "%d", first);
+  ensure_anim_popup("Rolling...", buf);
+
+  if (dice_animation_timer) { lv_timer_del(dice_animation_timer); dice_animation_timer = nullptr; }
+  dice_animation_timer = lv_timer_create(dice_animation_tick, dice_cycle_delay, nullptr);
+}
+
+// Coin animation state
+static lv_timer_t* coin_animation_timer = nullptr;
+static int coin_animation_cycle = 0;
+static bool coin_final_result = false; // true=heads
+static uint32_t coin_cycle_delay = 0;
+
+static void coin_animation_tick(lv_timer_t* timer)
+{
+  coin_animation_cycle++;
+
+  if (coin_animation_cycle >= COIN_CYCLES) {
+    const char* txt = coin_final_result ? "HEADS" : "TAILS";
+    update_popup_text(txt);
+    animate_popup_bounce();
+    play_result_sound();
+    lv_timer_del(coin_animation_timer); coin_animation_timer = nullptr;
+    close_anim_popup_after(COIN_RESULT_HOLD_MS);
+    return;
+  }
+
+  const char* display_txt;
+  if (coin_animation_cycle >= COIN_CYCLES - 2) {
+    display_txt = coin_final_result ? "HEADS" : "TAILS";
+  } else {
+    display_txt = (coin_animation_cycle % 2 == 0) ? "HEADS" : "TAILS";
+  }
+  update_popup_text(display_txt);
+  play_tick_sound();
+
+  coin_cycle_delay += ANIMATION_SLOWDOWN_MS;
+  lv_timer_set_period(timer, coin_cycle_delay);
+}
+
+void animate_coin_flip(bool is_heads)
+{
+  coin_final_result = is_heads;
+  coin_animation_cycle = 0;
+  coin_cycle_delay = 40;
+
+  const char* first = (esp_random() % 2) == 0 ? "HEADS" : "TAILS";
+  ensure_anim_popup("Flipping...", first);
+
+  if (coin_animation_timer) { lv_timer_del(coin_animation_timer); coin_animation_timer = nullptr; }
+  coin_animation_timer = lv_timer_create(coin_animation_tick, coin_cycle_delay, nullptr);
 }
 
 void renderDiceListMenu() {
@@ -284,7 +470,22 @@ void renderDiceListMenu() {
       int result = DICE_TYPES[idx].roll_func();
       char buf[16];
       snprintf(buf, sizeof(buf), "%d", result);
-      show_tcg_result_popup(DICE_TYPES[idx].name, buf);
+      if (ENABLE_DICE_ANIMATION) {
+        int sides = 6;
+        switch (idx) {
+          case 0: sides = 4; break;  // D4
+          case 1: sides = 6; break;  // D6
+          case 2: sides = 8; break;  // D8
+          case 3: sides = 10; break; // D10
+          case 4: sides = 12; break; // D12
+          case 5: sides = 20; break; // D20
+          case 6: sides = 100; break; // D100
+        }
+        ensure_anim_popup(DICE_TYPES[idx].name, buf);
+        animate_dice_roll(result, sides);
+      } else {
+        show_tcg_result_popup(DICE_TYPES[idx].name, buf);
+      }
     }, LV_EVENT_CLICKED, NULL);
     
     lv_obj_t *lbl = lv_label_create(btn);

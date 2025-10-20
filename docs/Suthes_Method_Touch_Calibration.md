@@ -86,6 +86,23 @@ Each calibration step uses **invisible hit-test zones** to detect touch position
 - **Bottom zone hit** → `offset_y -= step` (shift up)
 - **Target zone hit** → Lock (perfectly centered!)
 
+#### Rotation Calibration (Optional)
+```
+┌─────────────────────────────┐
+│ LEFT  │  TARGET (UPPER) │RGT│
+│ ZONE  │   HALF OF LINE  │ZNE│
+│       │        ●        │   │
+│       │                 │   │
+│       │                 │   │
+└─────────────────────────────┘
+```
+- **Visual**: Vertical red line with red dot in upper quarter
+- **Target zone**: Entire upper half of the line (180px tall × 5px wide)
+- **Left zone hit** → Rotate counter-clockwise
+- **Right zone hit** → Rotate clockwise
+- **Target zone hit** → Lock (perfect rotation!)
+- **Note**: Large target area makes rotation calibration much easier
+
 #### Scale X Calibration
 ```
 ┌─────────────────────────────┐
@@ -301,12 +318,13 @@ During calibration, Suthe's Method adjusts **C, F, A, E** (and optionally **B, D
 6. **User releases** → Advances to next step
 
 #### Step 3: Rotation (Optional, if enabled)
-1. **Red dot** appears on diagonal line
-2. **User touches and holds** the dot
-3. **System detects** rotation error
-4. **Angle adjusts automatically** until touch aligns
-5. **Text changes** to "OK! Release finger"
-6. **User releases** → Advances to next step
+1. **Red vertical line** appears with **red dot in upper half**
+2. **User touches and holds** the upper half of the line (near the dot)
+3. **System detects** if touch is left/right of line
+4. **Angle adjusts automatically** until touch aligns with line
+5. **Target zone**: Entire upper half of the line (large target for easier alignment)
+6. **Text changes** to "OK! Release finger"
+7. **User releases** → Advances to next step
 
 #### Step 4: Scale X (Horizontal Scaling)
 1. **Red dot** appears on **right edge**

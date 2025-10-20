@@ -63,6 +63,44 @@
 
 
 // ============================================================================
+// 🎰 DICE AND COIN ANIMATION SETTINGS
+// ============================================================================
+// Slot-machine style animations: Numbers/text cycle rapidly then slow to result
+// Used by: src/ui/screens/menu/menu.cpp
+// ============================================================================
+
+#define ENABLE_DICE_ANIMATION true
+#define ENABLE_COIN_ANIMATION true
+
+// Animation timing
+#define DICE_ANIMATION_DURATION_MS 800      // Total animation time (ms)
+#define COIN_ANIMATION_DURATION_MS 1000     // Total animation time (ms)
+
+// Animation behavior
+#define DICE_CYCLES 15                      // How many random numbers to show
+#define COIN_CYCLES 12                      // How many flips (Heads/Tails)
+
+// Speed-up factor (each cycle gets longer by this amount)
+#define ANIMATION_SLOWDOWN_MS 10            // Add 10ms to each subsequent cycle
+
+// Visual effects
+#define ANIMATION_SCALE_BOUNCE true         // Scale up/down during animation
+#define ANIMATION_SOUND_TICKS true          // Beep on each change (if audio on)
+
+
+// ============================================================================
+// 🪄 RESULT POPUP DISPLAY DURATIONS
+// ============================================================================
+// How long result stays visible after animation / normal popup
+// Used by: src/ui/screens/menu/menu.cpp
+// ============================================================================
+
+#define DICE_RESULT_HOLD_MS 1000
+#define COIN_RESULT_HOLD_MS 1000
+#define GENERIC_RESULT_HOLD_MS 1000
+
+
+// ============================================================================
 // 🎮 PRESET DEFINITIONS
 // ============================================================================
 // TCG game presets: name, starting life, steps, theme assignment
