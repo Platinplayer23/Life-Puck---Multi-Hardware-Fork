@@ -1,4 +1,5 @@
 #include "power_management.h"
+#include "config.h"
 #include "battery_state.h"
 #include "core/state_manager.h"
 #include "hardware/display/display_st77916.h"
@@ -18,7 +19,8 @@ static bool display_is_dimmed = false;
 static bool display_is_low_battery_dimmed = false; // Track if dimmed due to low battery
 static int original_brightness = 50; // Default brightness (0-100)
 static unsigned long last_wake_time = 0;  // Track when display was last woken
-static const unsigned long TOUCH_IGNORE_DELAY = 300; // Ignore touches for 300ms after wake
+static const unsigned long TOUCH_IGNORE_DELAY = TOUCH_BLOCK_AFTER_WAKE_MS;
+static bool power_management_suspended = false;  // Suspend power management during calibration
 
 // Critical battery shutdown tracking
 static bool low1 = false; // Track if battery is critically low
@@ -70,6 +72,11 @@ bool power_should_ignore_touch()
 
 void power_check_inactivity()
 {
+  // Skip if power management is suspended (e.g., during touch calibration)
+  if (power_management_suspended) {
+    return;
+  }
+  
   // Skip if display is already sleeping
   if (display_is_sleeping) {
     return;
@@ -79,9 +86,9 @@ void power_check_inactivity()
   unsigned long inactive_time = (current_time - last_activity_time) / 1000; // Convert to seconds
   
   // Get settings from NVS
-  int auto_dim_time = player_store.getInt(KEY_AUTO_DIM_TIME, 60); // Default: 1 min
-  int sleep_time = player_store.getInt(KEY_SLEEP_TIME, 300); // Default: 5 min
-  bool battery_saver = player_store.getInt(KEY_BATTERY_SAVER, 1) != 0; // Default: ON
+  int auto_dim_time = player_store.getInt(KEY_AUTO_DIM_TIME, AUTO_DIM_DEFAULT);
+  int sleep_time = player_store.getInt(KEY_SLEEP_TIME, SLEEP_DEFAULT);
+  bool battery_saver = player_store.getInt(KEY_BATTERY_SAVER, LOW_BATTERY_DIM_DEFAULT) != 0;
   
   // Check for sleep FIRST (works even during low battery dim)
   if (sleep_time > 0 && inactive_time >= sleep_time) {
@@ -213,6 +220,39 @@ void power_wake_display()
   Set_Backlight(original_brightness);
   display_is_sleeping = false;
   display_is_dimmed = false;
+}
+
+/**
+ * @brief Suspend or resume power management
+ * 
+ * Use this to prevent auto-dim and sleep during critical operations
+ * like touch calibration where user interaction is required.
+ * 
+ * @param suspend true to suspend power management, false to resume
+ */
+void power_suspend(bool suspend)
+{
+  power_management_suspended = suspend;
+  
+  if (suspend) {
+    printf("[Power] Power management SUSPENDED (auto-dim and sleep disabled)\n");
+    // Wake display if sleeping or dimmed
+    if (display_is_sleeping) {
+      power_wake_display();
+    }
+    if (display_is_dimmed && !display_is_low_battery_dimmed) {
+      // Restore from auto-dim (but keep low battery dim if active)
+      original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50);
+      Set_Backlight(original_brightness);
+      display_is_dimmed = false;
+    }
+    // Reset inactivity timer
+    power_reset_inactivity_timer();
+  } else {
+    printf("[Power] Power management RESUMED (auto-dim and sleep re-enabled)\n");
+    // Reset inactivity timer to give user a grace period
+    power_reset_inactivity_timer();
+  }
 }
 
 void power_apply_battery_saver()

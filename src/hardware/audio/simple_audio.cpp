@@ -1,4 +1,5 @@
 #include "simple_audio.h"
+#include "config.h"
 #include "driver/i2s.h"
 #include "ArduinoNvs.h"
 #include "core/state_manager.h"
@@ -53,9 +54,9 @@ void simple_audio_init() {
     if (audio_initialized) return;
     
     // Load settings from NVS
-    audio_enabled = player_store.getInt("audio_enabled", 1) == 1;
+    audio_enabled = player_store.getInt("audio_enabled", AUDIO_ENABLED_DEFAULT) == 1;
     audio_volume = player_store.getInt("audio_volume", AUDIO_VOLUME_DEFAULT);
-    timer_sound = (sound_type_t)player_store.getInt("timer_sound", SOUND_TIMER_FINISH);
+    timer_sound = (sound_type_t)player_store.getInt("timer_sound", TIMER_SOUND_DEFAULT);
     
     if (!audio_enabled) {
         printf("[Audio] Audio disabled in settings\n");

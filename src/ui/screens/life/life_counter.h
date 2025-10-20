@@ -20,6 +20,8 @@ void clear_amp();
 void toggle_amp_visibility();
 void life_counter_loop();
 void teardown_life_counter();
+void refresh_life_counter_theme();
+void resetLastLoadedTheme();  // Reset theme tracker for preset changes  // NEW: Refresh theme without full re-render
 
 // *** PERSISTENT LIFE STORAGE ***
 void saveLifeToNVS(int life_value, int player = 1);

@@ -33,6 +33,7 @@
 // Data Layer
 // ============================================
 #include "data/constants.h"
+#include "data/themes.h"
 
 // ============================================
 // Hardware/Storage
@@ -42,6 +43,8 @@
 
 // --- Life Counter GUI State ---
 lv_obj_t *life_counter_container = nullptr;
+static lv_obj_t *theme_background = nullptr;  // Theme background image
+static const Theme* last_loaded_theme = nullptr;  // Track last loaded theme for change detection
 lv_obj_t *amp_button = nullptr;
 static lv_obj_t *lbl_amp_label = nullptr;
 static int amp_value = 0;
@@ -124,6 +127,57 @@ void init_life_counter()
     static lv_coord_t row_dsc[] = {130, 150, 60, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(life_counter_container, col_dsc, row_dsc);
     lv_obj_set_layout(life_counter_container, LV_LAYOUT_GRID);
+  }
+  
+  // *** THEME BACKGROUND INTEGRATION WITH LIVE UPDATE ***
+  // Get current theme and check if it changed
+  const Theme* current_theme = getCurrentTheme();
+  
+  // Detect theme change: either pointer changed or theme properties changed
+  bool theme_changed = (current_theme != last_loaded_theme);
+  
+  if (theme_changed)
+  {
+    printf("[LifeCounter] Theme change detected - reloading background\n");
+    
+    // Clean up old background if exists
+    if (theme_background)
+    {
+      lv_obj_del(theme_background);
+      theme_background = nullptr;
+      printf("[LifeCounter] Old theme background removed\n");
+    }
+    
+    // Create new background if theme is active
+    if (current_theme != nullptr && current_theme->background_image != nullptr)
+    {
+      // Create background image as FIRST child (lowest z-order)
+      theme_background = lv_image_create(life_counter_container);
+      lv_image_set_src(theme_background, current_theme->background_image);
+      
+      // Scale to fill screen (360x360)
+      lv_obj_set_size(theme_background, SCREEN_WIDTH, SCREEN_HEIGHT);
+      lv_obj_align(theme_background, LV_ALIGN_CENTER, 0, 0);
+      
+      // Set opacity from theme configuration
+      lv_obj_set_style_opa(theme_background, current_theme->background_opacity, 0);
+      
+      // Ensure background is not clickable and doesn't interfere with UI
+      lv_obj_clear_flag(theme_background, LV_OBJ_FLAG_CLICKABLE);
+      lv_obj_add_flag(theme_background, LV_OBJ_FLAG_IGNORE_LAYOUT);
+      
+      // Move to background (lowest z-order) - ensures all UI elements are on top
+      lv_obj_move_background(theme_background);
+      
+      printf("[LifeCounter] New theme background loaded with opacity %d\n", current_theme->background_opacity);
+    }
+    else
+    {
+      printf("[LifeCounter] Theme OFF - no background displayed\n");
+    }
+    
+    // Update last loaded theme
+    last_loaded_theme = current_theme;
   }
   
   if (!life_arc)
@@ -253,6 +307,83 @@ void reset_life()
   clearSavedLife();
 }
 
+/**
+ * @brief Refresh theme background without full screen re-render
+ * 
+ * Called when returning to Life Counter from Settings menu.
+ * Checks if theme changed and updates background accordingly.
+ * Does NOT reset life points or other UI elements.
+ */
+void refresh_life_counter_theme()
+{
+  // Only refresh if Life Counter is active
+  if (life_counter_container == nullptr)
+  {
+    printf("[LifeCounter] Refresh skipped - screen not active\n");
+    return;
+  }
+  
+  // Get current theme from settings
+  const Theme* current_theme = getCurrentTheme();
+  
+  // Check if theme changed since last load
+  bool theme_changed = (current_theme != last_loaded_theme);
+  
+  if (theme_changed)
+  {
+    printf("[LifeCounter] === THEME REFRESH TRIGGERED ===\n");
+    printf("[LifeCounter] Old theme: %p, New theme: %p\n", last_loaded_theme, current_theme);
+    
+    // Clean up old background if exists
+    if (theme_background)
+    {
+      lv_obj_del(theme_background);
+      theme_background = nullptr;
+      printf("[LifeCounter] Old background removed\n");
+    }
+    
+    // Create new background if theme is active
+    if (current_theme != nullptr && current_theme->background_image != nullptr)
+    {
+      // Create background image
+      theme_background = lv_image_create(life_counter_container);
+      lv_image_set_src(theme_background, current_theme->background_image);
+      
+      // Scale to fill screen (360x360)
+      lv_obj_set_size(theme_background, SCREEN_WIDTH, SCREEN_HEIGHT);
+      lv_obj_align(theme_background, LV_ALIGN_CENTER, 0, 0);
+      
+      // Set opacity from theme configuration
+      lv_obj_set_style_opa(theme_background, current_theme->background_opacity, 0);
+      
+      // Ensure background is not clickable and doesn't interfere with UI
+      lv_obj_clear_flag(theme_background, LV_OBJ_FLAG_CLICKABLE);
+      lv_obj_add_flag(theme_background, LV_OBJ_FLAG_IGNORE_LAYOUT);
+      
+      // Move to background (lowest z-order) - ensures all UI elements are on top
+      lv_obj_move_background(theme_background);
+      
+      printf("[LifeCounter] New background loaded (opacity: %d)\n", current_theme->background_opacity);
+    }
+    else
+    {
+      printf("[LifeCounter] Theme OFF - no background\n");
+    }
+    
+    // Update last loaded theme
+    last_loaded_theme = current_theme;
+    
+    // Force LVGL to redraw the screen
+    lv_obj_invalidate(life_counter_container);
+    
+    printf("[LifeCounter] === THEME REFRESH COMPLETE ===\n");
+  }
+  else
+  {
+    printf("[LifeCounter] Theme unchanged - no refresh needed\n");
+  }
+}
+
 void teardown_life_counter()
 {
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
@@ -272,6 +403,18 @@ void teardown_life_counter()
   grouped_change_label = nullptr;
   amp_button = nullptr;
   lbl_amp_label = nullptr;
+  theme_background = nullptr;  // Theme background cleanup
+  last_loaded_theme = nullptr;  // Reset theme tracking
+}
+
+/**
+ * @brief Reset theme tracker to force refresh on next render
+ * 
+ * Used when preset changes in Automatic mode to ensure
+ * Life Counter theme updates immediately.
+ */
+void resetLastLoadedTheme() {
+  last_loaded_theme = nullptr;  // Force refresh on next render
 }
 
 static void arc_anim_cb(void *arc_obj, int32_t v)

@@ -1,5 +1,6 @@
 #include "audio_settings.h"
 #include "data/constants.h"
+#include "data/themes.h"
 #include "ui/screens/menu/menu.h"
 #include "ui/helpers/gestures.h"
 #include "hardware/audio/simple_audio.h"
@@ -54,11 +55,12 @@ void renderAudioSettingsMenu()
   bool audio_enabled = simple_audio_is_enabled();
   lv_obj_t *btn_audio_toggle = lv_btn_create(audio_menu);
   lv_obj_set_size(btn_audio_toggle, 280, 50);
-  lv_obj_set_style_bg_color(btn_audio_toggle, (audio_enabled ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_audio_toggle, (audio_enabled ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_audio_toggle, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_t *lbl_audio = lv_label_create(btn_audio_toggle);
   lv_label_set_text(lbl_audio, (audio_enabled ? "Audio: ON" : "Audio: OFF"));
   lv_obj_set_style_text_font(lbl_audio, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(lbl_audio, (audio_enabled ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when ON
   lv_obj_center(lbl_audio);
   lv_obj_add_event_cb(btn_audio_toggle, [](lv_event_t *e)
                       {
@@ -68,7 +70,8 @@ void renderAudioSettingsMenu()
     bool new_mode = !current;
     simple_audio_set_enabled(new_mode);
     lv_label_set_text(label, (new_mode ? "Audio: ON" : "Audio: OFF"));
-    lv_obj_set_style_bg_color(btn, (new_mode ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(btn, (new_mode ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
+    lv_obj_set_style_text_color(label, (new_mode ? getThemeTextColor() : lv_color_white()), 0);
     // No click sound for audio toggle
   }, LV_EVENT_CLICKED, NULL);
 
@@ -76,7 +79,7 @@ void renderAudioSettingsMenu()
   int current_volume = simple_audio_get_volume();
   lv_obj_t *btn_audio_volume = lv_btn_create(audio_menu);
   lv_obj_set_size(btn_audio_volume, 280, 50);
-  lv_obj_set_style_bg_color(btn_audio_volume, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_audio_volume, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_audio_volume, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 3, 1);
   lv_obj_t *lbl_volume = lv_label_create(btn_audio_volume);
   
@@ -91,6 +94,7 @@ void renderAudioSettingsMenu()
   snprintf(volume_text, sizeof(volume_text), "Volume: %d%%", volume_to_percent(current_volume));
   lv_label_set_text(lbl_volume, volume_text);
   lv_obj_set_style_text_font(lbl_volume, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(lbl_volume, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_volume);
   lv_obj_add_event_cb(btn_audio_volume, [](lv_event_t *e)
                       {
@@ -115,12 +119,13 @@ void renderAudioSettingsMenu()
   sound_type_t current_timer_sound = simple_audio_get_timer_sound();
   lv_obj_t *btn_timer_sound = lv_btn_create(audio_menu);
   lv_obj_set_size(btn_timer_sound, 280, 50);
-  lv_obj_set_style_bg_color(btn_timer_sound, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_timer_sound, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_timer_sound, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
   lv_obj_t *lbl_timer_sound = lv_label_create(btn_timer_sound);
   const char* sound_names[] = {"Timer Sound: 1", "Timer Sound: 2", "Timer Sound: 3", "Timer Sound: 4"};
   lv_label_set_text(lbl_timer_sound, sound_names[current_timer_sound]);
   lv_obj_set_style_text_font(lbl_timer_sound, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(lbl_timer_sound, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_timer_sound);
   lv_obj_add_event_cb(btn_timer_sound, [](lv_event_t *e)
                       {

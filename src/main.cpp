@@ -11,6 +11,7 @@
 // Config Headers
 // ============================================
 #include <board_config.h>
+#include "config.h"
 
 // ============================================
 // Core System
@@ -113,20 +114,70 @@ void setup()
     LCD_Init();
     Backlight_Init();
     
-    // Load and apply saved brightness from NVS
-    int saved_brightness = player_store.getInt(KEY_BRIGHTNESS, 100);  // Default to 100% if not set
-    Set_Backlight(saved_brightness);
-    printf("[MAIN] Applied saved brightness: %d%%\n", saved_brightness);
+    // Load and apply saved brightness from NVS (or force to default)
+    #if FORCE_BRIGHTNESS
+        Set_Backlight(FORCED_BRIGHTNESS_VALUE);
+        printf("[MAIN] ⚠️  FORCE_BRIGHTNESS active - brightness: %d\n", FORCED_BRIGHTNESS_VALUE);
+    #elif FORCE_FACTORY_RESET
+        Set_Backlight(BRIGHTNESS_DEFAULT);
+        printf("[MAIN] ⚠️  FORCE_FACTORY_RESET - brightness: %d (default)\n", BRIGHTNESS_DEFAULT);
+    #else
+        int saved_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT);
+        Set_Backlight(saved_brightness);
+        printf("[MAIN] Applied saved brightness: %d%%\n", saved_brightness);
+    #endif
 
     // GUI system initialization
     Lvgl_Init();
     
-    // === NOTFALL: Touch Calibration Reset ===
-    // UNCOMMENT THIS LINE to force-reset touch calibration to defaults!
-  //resetTouchCalibrationToDefaults();  // ← Remove the //
+    // ============================================================================
+    // FORCE RESET FLAGS - Apply settings resets
+    // ============================================================================
+    #if FORCE_NVS_CLEAR
+        Serial.println("⚠️⚠️⚠️  FORCE_NVS_CLEAR ACTIVE - ERASING ALL NVS DATA  ⚠️⚠️⚠️");
+        NVS.eraseAll();
+        Serial.println("⚠️  NVS CLEARED! Set FORCE_NVS_CLEAR back to false in config.h!");
+        delay(2000); // Give user time to see the warning
+    #endif
     
-    // Load saved touch calibration from NVS (after LVGL init)
-    loadTouchCalibrationFromNVS();
+    #if FORCE_FACTORY_RESET
+        Serial.println("⚠️  FORCE_FACTORY_RESET active - resetting all settings to config.h defaults");
+        // Reset all settings to config.h values
+        player_store.putInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT);
+        player_store.putInt("audio_enabled", AUDIO_ENABLED_DEFAULT);
+        player_store.putInt("audio_volume", AUDIO_VOLUME_DEFAULT);
+        player_store.putInt(KEY_SHOW_TIMER, TIMER_ENABLED_DEFAULT);
+        player_store.putInt(KEY_THEME_MODE, 0); // THEME_MODE_OFF
+        player_store.putInt(KEY_AUTO_DIM_TIME, AUTO_DIM_DEFAULT);
+        player_store.putInt(KEY_SLEEP_TIME, SLEEP_DEFAULT);
+        player_store.putInt(KEY_BATTERY_SAVER, LOW_BATTERY_DIM_DEFAULT);
+        Serial.println("✅ All settings reset to defaults!");
+    #endif
+    
+    #if FORCE_THEME_MODE
+        player_store.putInt(KEY_THEME_MODE, FORCED_THEME_MODE_VALUE);
+        Serial.printf("⚠️  FORCE_THEME_MODE active - mode: %d\n", FORCED_THEME_MODE_VALUE);
+    #endif
+    
+    #if FORCE_THEME_SELECTION
+        player_store.putInt(KEY_THEME_SELECTION, FORCED_THEME_VALUE);
+        Serial.printf("⚠️  FORCE_THEME_SELECTION active - theme: %d\n", FORCED_THEME_VALUE);
+    #endif
+    
+    #if FORCE_AUDIO_SETTINGS
+        player_store.putInt("audio_enabled", FORCED_AUDIO_ENABLED ? 1 : 0);
+        player_store.putInt("audio_volume", FORCED_AUDIO_VOLUME);
+        Serial.printf("⚠️  FORCE_AUDIO_SETTINGS active - enabled: %d, volume: %d\n", 
+                      FORCED_AUDIO_ENABLED, FORCED_AUDIO_VOLUME);
+    #endif
+    
+    #if FORCE_DEFAULT_CALIBRATION
+        Serial.println("⚠️  FORCE_DEFAULT_CALIBRATION active - using config.h touch defaults");
+        resetTouchCalibrationToDefaults();
+    #else
+        // Load saved touch calibration from NVS (after LVGL init)
+        loadTouchCalibrationFromNVS();
+    #endif
 
     // System monitoring initialization  
     battery_init();
@@ -136,7 +187,12 @@ void setup()
     printf("[MAIN] Audio system initialized\n");
 
     // Initialize presets BEFORE ui_init()! (This also initializes NVS)
-    init_presets();
+    #if FORCE_DEFAULT_PRESETS
+        Serial.println("⚠️  FORCE_DEFAULT_PRESETS active - ignoring saved presets");
+        init_default_presets(); // Skip NVS loading, use config.h only
+    #else
+        init_presets(); // Normal: Load from NVS or use defaults
+    #endif
     load_preset();
     
     // Set initial life values from current preset
@@ -160,10 +216,15 @@ void setup()
     ui_init();
     
     // Check if touch calibration confirmation is needed after boot
-    if (needsTouchCalibrationConfirmation()) {
-        printf("[MAIN] Touch calibration confirmation required - showing dialog\n");
-        renderTouchCalibrationConfirmation();
-    }
+    #if !SKIP_INITIAL_CALIBRATION
+        if (needsTouchCalibrationConfirmation()) {
+            printf("[MAIN] Touch calibration confirmation required - showing dialog\n");
+            renderTouchCalibrationConfirmation();
+        }
+    #else
+        Serial.println("⚠️  SKIP_INITIAL_CALIBRATION active - skipping calibration confirmation");
+        confirmTouchCalibration(); // Auto-confirm any pending calibration
+    #endif
     
     // PSRAM initialization with error handling
     if (psramFound()) {

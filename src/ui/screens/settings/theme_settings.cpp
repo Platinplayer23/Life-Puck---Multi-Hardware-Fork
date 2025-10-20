@@ -27,6 +27,10 @@
 // Data Layer
 // ============================================
 #include "data/constants.h"
+#include "data/themes.h"
+
+// Static variables for tracking theme changes
+static const Theme* last_theme_settings_theme = nullptr;
 
 // Static pointer to the theme menu container
 static lv_obj_t *theme_menu = nullptr;
@@ -62,16 +66,18 @@ static const char* getThemeSelectionText(ThemeSelection theme)
 {
   switch (theme)
   {
-    case THEME_DEFAULT:
-      return "Theme: Default";
+    case THEME_OFF:
+      return "Theme: Off";
     case THEME_YUGIOH:
       return "Theme: Yugioh";
     case THEME_MAGIC:
       return "Theme: Magic";
     case THEME_POKEMON:
       return "Theme: Pokemon";
-    default:
+    case THEME_DEFAULT:
       return "Theme: Default";
+    default:
+      return "Theme: Off";
   }
 }
 
@@ -101,7 +107,7 @@ static ThemeMode getNextThemeMode(ThemeMode current)
 /**
  * @brief Cycle to the next theme selection
  * 
- * Cycles through: Default → Yugioh → Magic → Pokemon → Default
+ * Cycles through all 5 themes: Off → Yugioh → Magic → Pokemon → Default → Off
  * 
  * @param current The current theme selection
  * @return ThemeSelection The next theme in the cycle
@@ -110,7 +116,7 @@ static ThemeSelection getNextThemeSelection(ThemeSelection current)
 {
   switch (current)
   {
-    case THEME_DEFAULT:
+    case THEME_OFF:
       return THEME_YUGIOH;
     case THEME_YUGIOH:
       return THEME_MAGIC;
@@ -118,8 +124,10 @@ static ThemeSelection getNextThemeSelection(ThemeSelection current)
       return THEME_POKEMON;
     case THEME_POKEMON:
       return THEME_DEFAULT;
+    case THEME_DEFAULT:
+      return THEME_OFF;
     default:
-      return THEME_DEFAULT;
+      return THEME_OFF;
   }
 }
 
@@ -174,29 +182,31 @@ void renderThemeSettingsMenu()
   // Theme Mode Toggle Button (Row 2, Full Width)
   lv_obj_t *btn_theme_mode = lv_btn_create(theme_menu);
   lv_obj_set_size(btn_theme_mode, 280, 50);
-  // Color: Gray when OFF, LIGHTNING_BLUE_COLOR when not OFF
+  // Color: Gray when OFF, Theme color when not OFF
   bool theme_mode_active = (current_theme_mode != THEME_MODE_OFF);
   lv_obj_set_style_bg_color(btn_theme_mode, 
-    (theme_mode_active ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), 
+    (theme_mode_active ? getThemeButtonColor() : lv_color_hex(0x444444)), 
     LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_theme_mode, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_t *lbl_theme_mode = lv_label_create(btn_theme_mode);
   lv_label_set_text(lbl_theme_mode, getThemeModeText(current_theme_mode));
   lv_obj_set_style_text_font(lbl_theme_mode, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(lbl_theme_mode, (theme_mode_active ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when active
   lv_obj_center(lbl_theme_mode);
 
   // Theme Selection Button (Row 3, Full Width)
   lv_obj_t *btn_theme_sel = lv_btn_create(theme_menu);
   lv_obj_set_size(btn_theme_sel, 280, 50);
-  // Color: Gray when Theme Mode is OFF or Automatic, LIGHTNING_BLUE_COLOR only when Manual
+  // Color: Gray when Theme Mode is OFF or Automatic, Theme color only when Manual
   bool theme_sel_active = (current_theme_mode == THEME_MODE_MANUAL);
   lv_obj_set_style_bg_color(btn_theme_sel, 
-    (theme_sel_active ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), 
+    (theme_sel_active ? getThemeButtonColor() : lv_color_hex(0x444444)), 
     LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_theme_sel, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 3, 1);
   lv_obj_t *lbl_theme_sel = lv_label_create(btn_theme_sel);
   lv_label_set_text(lbl_theme_sel, getThemeSelectionText(current_theme_sel));
   lv_obj_set_style_text_font(lbl_theme_sel, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(lbl_theme_sel, (theme_sel_active ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when active
   lv_obj_center(lbl_theme_sel);
 
   // Event callback for Theme Mode button
@@ -222,20 +232,22 @@ void renderThemeSettingsMenu()
     player_store.putInt(KEY_THEME_MODE, static_cast<int>(next));
     printf("[ThemeSettings] Theme Mode changed: %s\n", getThemeModeText(next));
     
-    // Update button text and color
+    // Update button text only (colors will update when leaving menu)
     lv_obj_t *label = lv_obj_get_child(pair->mode_btn, 0);
     lv_label_set_text(label, getThemeModeText(next));
     
     bool is_active = (next != THEME_MODE_OFF);
     lv_obj_set_style_bg_color(pair->mode_btn, 
-      (is_active ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), 
+      (is_active ? getThemeButtonColor() : lv_color_hex(0x444444)), 
       LV_PART_MAIN);
+    // Text color will be updated when leaving theme menu
     
     // Update Theme Selection button color (only active when Manual mode)
     bool sel_active = (next == THEME_MODE_MANUAL);
     lv_obj_set_style_bg_color(pair->sel_btn, 
-      (sel_active ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), 
+      (sel_active ? getThemeButtonColor() : lv_color_hex(0x444444)), 
       LV_PART_MAIN);
+    // Text color will be updated when leaving theme menu
     
     // TODO: Apply theme changes when theme system is implemented
   }, LV_EVENT_CLICKED, &btn_pair);
@@ -263,10 +275,11 @@ void renderThemeSettingsMenu()
     player_store.putInt(KEY_THEME_SELECTION, static_cast<int>(next));
     printf("[ThemeSettings] Theme Selection changed: %s\n", getThemeSelectionText(next));
     
-    // Update button text
+    // Update button text only (colors will update when leaving menu)
     lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
     lv_obj_t *label = lv_obj_get_child(btn, 0);
     lv_label_set_text(label, getThemeSelectionText(next));
+    // Text color will be updated when leaving theme menu
     
     // TODO: Apply selected theme when theme system is implemented
   }, LV_EVENT_CLICKED, NULL);
@@ -346,5 +359,49 @@ void teardownThemeSettingsMenu()
     lv_obj_del(theme_menu);
     theme_menu = nullptr;
   }
+  last_theme_settings_theme = nullptr;
+}
+
+/**
+ * @brief Refresh theme colors in theme settings menu
+ * 
+ * Updates button and text colors when returning to theme settings menu
+ * after theme changes. Called from settings_overlay.cpp.
+ */
+void refreshThemeSettingsColors() {
+  if (theme_menu == nullptr) return;
+
+  const Theme* current_theme = getCurrentTheme();
+  if (current_theme == last_theme_settings_theme) return;
+
+  lv_color_t btn_color = getThemeButtonColor();
+  lv_color_t txt_color = getThemeTextColor();
+
+  // Update all buttons in the theme menu
+  // Find buttons by iterating through children
+  uint32_t child_count = lv_obj_get_child_cnt(theme_menu);
+  for (uint32_t i = 0; i < child_count; i++) {
+    lv_obj_t *child = lv_obj_get_child(theme_menu, i);
+    
+    // Check if this is a button (has clickable flag)
+    if (lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE)) {
+      // Skip back button (white background)
+      lv_color_t bg_color = lv_obj_get_style_bg_color(child, LV_PART_MAIN);
+      if (lv_color_eq(bg_color, lv_color_white())) {
+        continue; // Skip back button
+      }
+      
+      // Update button background color
+      lv_obj_set_style_bg_color(child, btn_color, LV_PART_MAIN);
+      
+      // Update text color if button has label
+      lv_obj_t *label = lv_obj_get_child(child, 0);
+      if (label) {
+        lv_obj_set_style_text_color(label, txt_color, 0);
+      }
+    }
+  }
+
+  last_theme_settings_theme = current_theme;
 }
 

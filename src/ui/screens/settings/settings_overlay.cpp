@@ -36,12 +36,16 @@
 // Data Layer
 // ============================================
 #include "data/constants.h"
+#include "data/themes.h"
 #include "hardware/audio/simple_audio.h"
 
 
 extern lv_obj_t *settings_menu;
 extern lv_obj_t *life_counter_container;
 extern lv_obj_t *life_counter_container_2p;
+
+// Theme tracking for Settings menu
+static const Theme* last_settings_theme = nullptr;
 
 static void btn_life_event_cb(lv_event_t *e)
 {
@@ -149,11 +153,12 @@ void renderSettingsOverlay()
   // Audio Settings Submenu (Row 2, Col 0)
   lv_obj_t *btn_audio_settings = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_audio_settings, 140, 50);
-  lv_obj_set_style_bg_color(btn_audio_settings, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_audio_settings, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_audio_settings, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_t *lbl_audio_settings = lv_label_create(btn_audio_settings);
   lv_label_set_text(lbl_audio_settings, "Audio");
   lv_obj_set_style_text_font(lbl_audio_settings, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_audio_settings, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_audio_settings);
   lv_obj_add_event_cb(btn_audio_settings, [](lv_event_t *e)
                       { renderMenu(MENU_AUDIO_SETTINGS); }, LV_EVENT_CLICKED, NULL);
@@ -161,11 +166,12 @@ void renderSettingsOverlay()
   // Timer Settings Submenu (Row 2, Col 1)
   lv_obj_t *btn_timer_settings = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_timer_settings, 140, 50);
-  lv_obj_set_style_bg_color(btn_timer_settings, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_timer_settings, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_timer_settings, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_t *lbl_timer_settings = lv_label_create(btn_timer_settings);
   lv_label_set_text(lbl_timer_settings, "Timer");
   lv_obj_set_style_text_font(lbl_timer_settings, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_timer_settings, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_timer_settings);
   lv_obj_add_event_cb(btn_timer_settings, [](lv_event_t *e)
                       { renderMenu(MENU_TIMER_SETTINGS); }, LV_EVENT_CLICKED, NULL);
@@ -173,11 +179,12 @@ void renderSettingsOverlay()
   // Power Settings Submenu (Row 3, Col 0)
   lv_obj_t *btn_power_settings = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_power_settings, 140, 50);
-  lv_obj_set_style_bg_color(btn_power_settings, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_power_settings, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_power_settings, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 3, 1);
   lv_obj_t *lbl_power_settings = lv_label_create(btn_power_settings);
   lv_label_set_text(lbl_power_settings, "Power");
   lv_obj_set_style_text_font(lbl_power_settings, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_power_settings, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_power_settings);
   lv_obj_add_event_cb(btn_power_settings, [](lv_event_t *e)
                       { renderMenu(MENU_POWER_SETTINGS); }, LV_EVENT_CLICKED, NULL);
@@ -185,11 +192,12 @@ void renderSettingsOverlay()
   // Edit Presets button (Row 3, Col 1)
   lv_obj_t *btn_edit_presets = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_edit_presets, 140, 50);
-  lv_obj_set_style_bg_color(btn_edit_presets, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_edit_presets, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 3, 1);
   lv_obj_t *lbl_edit_presets = lv_label_create(btn_edit_presets);
   lv_label_set_text(lbl_edit_presets, "Edit Presets");
   lv_obj_set_style_text_font(lbl_edit_presets, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_edit_presets, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_edit_presets);
   lv_obj_add_event_cb(btn_edit_presets, [](lv_event_t *e)
                       { renderMenu(MENU_PRESET_EDITOR); }, LV_EVENT_CLICKED, NULL);
@@ -197,11 +205,12 @@ void renderSettingsOverlay()
   // Themes Settings Submenu (Row 4, Col 0) - NEW
   lv_obj_t *btn_theme_settings = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_theme_settings, 140, 50);
-  lv_obj_set_style_bg_color(btn_theme_settings, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_theme_settings, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_theme_settings, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
   lv_obj_t *lbl_theme_settings = lv_label_create(btn_theme_settings);
   lv_label_set_text(lbl_theme_settings, "Themes");
   lv_obj_set_style_text_font(lbl_theme_settings, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_theme_settings, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_theme_settings);
   lv_obj_add_event_cb(btn_theme_settings, [](lv_event_t *e)
                       { renderMenu(MENU_THEME_SETTINGS); }, LV_EVENT_CLICKED, NULL);
@@ -209,11 +218,12 @@ void renderSettingsOverlay()
   // Touch Calibration button (Row 4, Col 1)
   lv_obj_t *btn_touch_cal = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_touch_cal, 120, 50);
-  lv_obj_set_style_bg_color(btn_touch_cal, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_touch_cal, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 4, 1);
   lv_obj_t *lbl_touch_cal = lv_label_create(btn_touch_cal);
   lv_label_set_text(lbl_touch_cal, "Touch Cal");
   lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_touch_cal, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_touch_cal);
   lv_obj_add_event_cb(btn_touch_cal, [](lv_event_t *e)
                       { renderMenu(MENU_TOUCH_CALIBRATION); }, LV_EVENT_CLICKED, NULL);
@@ -221,11 +231,12 @@ void renderSettingsOverlay()
   // Start Life button (Row 5, Col 0)
   lv_obj_t *btn_life = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_life, 120, 50);
-  lv_obj_set_style_bg_color(btn_life, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_life, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_life, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 5, 1);
   lv_obj_t *lbl_life = lv_label_create(btn_life);
   lv_label_set_text(lbl_life, "Start Life");
   lv_obj_set_style_text_font(lbl_life, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_life, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_life);
   lv_obj_add_event_cb(btn_life, btn_life_event_cb, LV_EVENT_CLICKED, NULL);
 
@@ -234,11 +245,12 @@ void renderSettingsOverlay()
   bool amp_enabled = (amp_mode == PLAYER_MODE_TWO_PLAYER);
   lv_obj_t *btn_amp = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_amp, 120, 50);
-  lv_obj_set_style_bg_color(btn_amp, (amp_enabled ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_amp, (amp_enabled ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_amp, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 5, 1);
   lv_obj_t *lbl_amp = lv_label_create(btn_amp);
   lv_label_set_text(lbl_amp, amp_enabled ? "AMP: ON" : "AMP: OFF");
   lv_obj_set_style_text_font(lbl_amp, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_amp, (amp_enabled ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when ON, white when OFF
   lv_obj_center(lbl_amp);
   lv_obj_add_event_cb(btn_amp, [](lv_event_t *e)
                       {
@@ -255,18 +267,20 @@ void renderSettingsOverlay()
     lv_obj_t *label = lv_obj_get_child(btn, 0);
                         bool amp_enabled = (amp_mode == PLAYER_MODE_TWO_PLAYER);
                         lv_label_set_text(label, amp_enabled ? "AMP: ON" : "AMP: OFF");
-                        lv_obj_set_style_bg_color(btn, (amp_enabled ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
+                        lv_obj_set_style_bg_color(btn, (amp_enabled ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
+                        lv_obj_set_style_text_color(label, (amp_enabled ? getThemeTextColor() : lv_color_white()), 0);
                       }, LV_EVENT_CLICKED, NULL);
 
   // Swipe to Close Button (Row 6, Col 0)
   bool swipe_enabled_btn = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
   lv_obj_t *btn_swipe = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_swipe, 120, 50);
-  lv_obj_set_style_bg_color(btn_swipe, (swipe_enabled_btn ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_swipe, (swipe_enabled_btn ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_swipe, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 6, 1);
   lv_obj_t *lbl_swipe = lv_label_create(btn_swipe);
   lv_label_set_text(lbl_swipe, swipe_enabled_btn ? "Swipe: ON" : "Swipe: OFF");
   lv_obj_set_style_text_font(lbl_swipe, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_swipe, (swipe_enabled_btn ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when ON, white when OFF
   lv_obj_center(lbl_swipe);
   lv_obj_add_event_cb(btn_swipe, [](lv_event_t *e)
                       {
@@ -279,7 +293,8 @@ void renderSettingsOverlay()
     lv_obj_t *label = lv_obj_get_child(btn, 0);
                         bool swipe_enabled = (swipe_state != 0);
                         lv_label_set_text(label, swipe_enabled ? "Swipe: ON" : "Swipe: OFF");
-                        lv_obj_set_style_bg_color(btn, (swipe_enabled ? LIGHTNING_BLUE_COLOR : lv_color_hex(0x444444)), LV_PART_MAIN);
+                        lv_obj_set_style_bg_color(btn, (swipe_enabled ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
+                        lv_obj_set_style_text_color(label, (swipe_enabled ? getThemeTextColor() : lv_color_white()), 0);
                         
                         // No need to update event handlers - they check the setting dynamically
   }, LV_EVENT_CLICKED, NULL);
@@ -308,5 +323,16 @@ void teardownSettingsOverlay()
     lv_obj_del(settings_menu);
     settings_menu = nullptr;
   }
+  last_settings_theme = nullptr;  // Reset theme tracking
+}
+
+/**
+ * @brief Reset theme tracker to force refresh on next render
+ * 
+ * Used when preset changes in Automatic mode to ensure
+ * Settings menu theme updates immediately.
+ */
+void resetLastSettingsTheme() {
+  last_settings_theme = nullptr;  // Force refresh on next render
 }
 

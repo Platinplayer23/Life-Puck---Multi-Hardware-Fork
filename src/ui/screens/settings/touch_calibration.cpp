@@ -23,6 +23,11 @@
 #include <math.h>
 
 // ============================================
+// Config
+// ============================================
+#include "config.h"
+
+// ============================================
 // Core System
 // ============================================
 #include "core/state_manager.h"
@@ -32,6 +37,7 @@
 // ============================================
 #include "hardware/display/lvgl_driver.h"
 #include "hardware/touch/touch_cst816.h"
+#include "hardware/system/power_management.h"
 
 // ============================================
 // UI Screens
@@ -57,7 +63,7 @@ extern struct CST816_Touch touch_data;
 // ============================================
 // CONFIRMATION TIMEOUT
 // ============================================
-#define CONFIRMATION_TIMEOUT_MS 10000
+// CONFIRMATION_TIMEOUT_MS now defined in config.h
 
 // ============================================
 // CALIBRATION PARAMETERS
@@ -72,7 +78,7 @@ extern struct CST816_Touch touch_data;
 #define SCALE_STEP_FINE 0.001f        // 0.1% per frame (high precision)
 #define ROTATION_STEP_FINE 0.002f     // ~0.11 degrees per frame (high precision)
 
-#define LOCK_FRAMES 10                // Number of consecutive frames in target zone to lock
+// LOCK_FRAMES now defined in config.h as CALIBRATION_LOCK_FRAMES
 
 // Refinement: Backtrack distance when switching from coarse to fine
 #define REFINEMENT_OFFSET_BACKTRACK 5.0f    // 5 pixels back from coarse target
@@ -290,7 +296,7 @@ void renderTouchCalibrationConfirmation() {
     
     confirmation_start_time = millis();
     confirmation_timer = lv_timer_create([](lv_timer_t* timer) {
-        long remaining_ms = (long)CONFIRMATION_TIMEOUT_MS - (long)(millis() - confirmation_start_time);
+        long remaining_ms = (long)CALIBRATION_TIMEOUT_MS - (long)(millis() - confirmation_start_time);
         if (remaining_ms > 0) {
             char txt[50];
             snprintf(txt, sizeof(txt), "Auto-revert in: %lds", (remaining_ms / 1000) + 1);
@@ -305,6 +311,9 @@ void renderTouchCalibrationConfirmation() {
 }
 
 void teardownTouchCalibrationConfirmation() {
+    // Resume power management when leaving confirmation screen
+    power_suspend(false);
+    
     if (confirmation_timer) {
         lv_timer_del(confirmation_timer);
         confirmation_timer = nullptr;
@@ -321,6 +330,9 @@ void teardownTouchCalibrationConfirmation() {
 
 void renderTouchCalibrationScreen() {
     printf("[TouchCal] Starting calibration\n");
+    
+    // Suspend power management (prevent auto-dim and sleep during calibration)
+    power_suspend(true);
     
     teardownTouchCalibrationScreen();
     
@@ -360,6 +372,9 @@ void renderTouchCalibrationScreen() {
 
 void teardownTouchCalibrationScreen() {
     printf("[TouchCal] Teardown\n");
+    
+    // Resume power management (re-enable auto-dim and sleep)
+    power_suspend(false);
     
     if (cal_timer) {
         lv_timer_del(cal_timer);
@@ -790,7 +805,7 @@ static void process_calibration_logic(lv_timer_t* timer) {
                 lock_frame_counter = 0;
             } else if (hit_target) {
                 lock_frame_counter++;
-                if (lock_frame_counter >= LOCK_FRAMES) {
+                if (lock_frame_counter >= CALIBRATION_LOCK_FRAMES) {
                     printf("[TouchCal] Offset X locked at %.2f\n", temp_cal_matrix[0]);
                     step_is_locked = true;
                     if (current_pass == CAL_PASS_FINE) {
@@ -814,7 +829,7 @@ static void process_calibration_logic(lv_timer_t* timer) {
                 lock_frame_counter = 0;
             } else if (hit_target) {
                 lock_frame_counter++;
-                if (lock_frame_counter >= LOCK_FRAMES) {
+                if (lock_frame_counter >= CALIBRATION_LOCK_FRAMES) {
                     printf("[TouchCal] Offset Y locked at %.2f\n", temp_cal_matrix[3]);
                     step_is_locked = true;
                     if (current_pass == CAL_PASS_FINE) {
@@ -835,7 +850,7 @@ static void process_calibration_logic(lv_timer_t* timer) {
                 printf("[TouchCal-Rotation] Raw: (%d,%d) → Cal: (%d,%d) | theta=%.3f rad (%.1f°)\n", 
                        x_raw, y_raw, x_calibrated, y_calibrated, current_theta, current_theta * 180.0f / M_PI);
                 printf("[TouchCal-Rotation] Hit: left=%d right=%d target=%d | lock=%d/%d\n", 
-                       hit_left, hit_right, hit_target, lock_frame_counter, LOCK_FRAMES);
+                       hit_left, hit_right, hit_target, lock_frame_counter, CALIBRATION_LOCK_FRAMES);
             }
             if (hit_left) {
                 current_theta -= current_rotation_step;
@@ -847,7 +862,7 @@ static void process_calibration_logic(lv_timer_t* timer) {
                 lock_frame_counter = 0;
             } else if (hit_target) {
                 lock_frame_counter++;
-                if (lock_frame_counter >= LOCK_FRAMES) {
+                if (lock_frame_counter >= CALIBRATION_LOCK_FRAMES) {
                     printf("[TouchCal-Rotation] LOCKED! Final theta=%.3f rad (%.1f°)\n",
                            current_theta, current_theta * 180.0f / M_PI);
                     step_is_locked = true;
@@ -871,7 +886,7 @@ static void process_calibration_logic(lv_timer_t* timer) {
                 lock_frame_counter = 0;
             } else if (hit_target) {
                 lock_frame_counter++;
-                if (lock_frame_counter >= LOCK_FRAMES) {
+                if (lock_frame_counter >= CALIBRATION_LOCK_FRAMES) {
                     printf("[TouchCal] Scale X locked at A=%.3f, B=%.3f\n", 
                            temp_cal_matrix[1], temp_cal_matrix[2]);
                     step_is_locked = true;
@@ -895,7 +910,7 @@ static void process_calibration_logic(lv_timer_t* timer) {
                 lock_frame_counter = 0;
             } else if (hit_target) {
                 lock_frame_counter++;
-                if (lock_frame_counter >= LOCK_FRAMES) {
+                if (lock_frame_counter >= CALIBRATION_LOCK_FRAMES) {
                     printf("[TouchCal] Scale Y locked at D=%.3f, E=%.3f\n", 
                            temp_cal_matrix[4], temp_cal_matrix[5]);
                     step_is_locked = true;

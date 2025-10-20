@@ -9,6 +9,11 @@
 #include <lvgl.h>
 
 // ============================================
+// Config
+// ============================================
+#include "config.h"
+
+// ============================================
 // Core System
 // ============================================
 #include "core/state_manager.h"
@@ -46,7 +51,7 @@ int brightness = -1;  // -1 means not loaded yet
 // Load brightness from NVS on first access  
 static void ensure_brightness_loaded() {
     if (brightness == -1) {
-        brightness = player_store.getInt(KEY_BRIGHTNESS, 100); // Load from NVS or default to 100%
+        brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT);
         printf("[Brightness] Loaded from NVS: %d%%\n", brightness);
     }
 }

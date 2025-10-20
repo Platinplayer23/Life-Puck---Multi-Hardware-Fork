@@ -33,6 +33,7 @@
 // Data Layer
 // ============================================
 #include "data/constants.h"
+#include "data/themes.h"
 
 // ============================================
 // Hardware/Storage
@@ -43,6 +44,8 @@
 // --- Two Player Life Counter GUI State ---
 #define ARC_GAP_DEGREES 60
 lv_obj_t *life_counter_container_2p = nullptr; // Global for menu access
+static lv_obj_t *theme_background_2p = nullptr;  // Theme background image
+static const Theme* last_loaded_theme_2p = nullptr;  // Track last loaded theme for change detection
 static lv_obj_t *life_arc_p1 = nullptr;
 static lv_obj_t *life_arc_p2 = nullptr;
 static lv_obj_t *life_label_p1 = nullptr;
@@ -130,6 +133,57 @@ void init_life_counter_2P()
     static lv_coord_t row_dsc[] = {150, 150, 60, LV_GRID_TEMPLATE_LAST};
     lv_obj_set_grid_dsc_array(life_counter_container_2p, col_dsc, row_dsc);
     lv_obj_set_layout(life_counter_container_2p, LV_LAYOUT_GRID);
+  }
+  
+  // *** THEME BACKGROUND INTEGRATION WITH LIVE UPDATE ***
+  // Get current theme and check if it changed
+  const Theme* current_theme = getCurrentTheme();
+  
+  // Detect theme change: either pointer changed or theme properties changed
+  bool theme_changed = (current_theme != last_loaded_theme_2p);
+  
+  if (theme_changed)
+  {
+    printf("[LifeCounter2P] Theme change detected - reloading background\n");
+    
+    // Clean up old background if exists
+    if (theme_background_2p)
+    {
+      lv_obj_del(theme_background_2p);
+      theme_background_2p = nullptr;
+      printf("[LifeCounter2P] Old theme background removed\n");
+    }
+    
+    // Create new background if theme is active
+    if (current_theme != nullptr && current_theme->background_image != nullptr)
+    {
+      // Create background image as FIRST child (lowest z-order)
+      theme_background_2p = lv_image_create(life_counter_container_2p);
+      lv_image_set_src(theme_background_2p, current_theme->background_image);
+      
+      // Scale to fill screen (360x360)
+      lv_obj_set_size(theme_background_2p, SCREEN_WIDTH, SCREEN_HEIGHT);
+      lv_obj_align(theme_background_2p, LV_ALIGN_CENTER, 0, 0);
+      
+      // Set opacity from theme configuration
+      lv_obj_set_style_opa(theme_background_2p, current_theme->background_opacity, 0);
+      
+      // Ensure background is not clickable and doesn't interfere with UI
+      lv_obj_clear_flag(theme_background_2p, LV_OBJ_FLAG_CLICKABLE);
+      lv_obj_add_flag(theme_background_2p, LV_OBJ_FLAG_IGNORE_LAYOUT);
+      
+      // Move to background (lowest z-order) - ensures all UI elements are on top
+      lv_obj_move_background(theme_background_2p);
+      
+      printf("[LifeCounter2P] New theme background loaded with opacity %d\n", current_theme->background_opacity);
+    }
+    else
+    {
+      printf("[LifeCounter2P] Theme OFF - no background displayed\n");
+    }
+    
+    // Update last loaded theme
+    last_loaded_theme_2p = current_theme;
   }
   if (!life_arc_p1)
   {
@@ -289,6 +343,83 @@ void decrement_life(int player, step_size_t step_size)
   queue_life_change_2p(player, -value);
 }
 
+/**
+ * @brief Refresh theme background without full screen re-render (Two Player)
+ * 
+ * Called when returning to Life Counter from Settings menu.
+ * Checks if theme changed and updates background accordingly.
+ * Does NOT reset life points or other UI elements.
+ */
+void refresh_life_counter_2p_theme()
+{
+  // Only refresh if Life Counter 2P is active
+  if (life_counter_container_2p == nullptr)
+  {
+    printf("[LifeCounter2P] Refresh skipped - screen not active\n");
+    return;
+  }
+  
+  // Get current theme from settings
+  const Theme* current_theme = getCurrentTheme();
+  
+  // Check if theme changed since last load
+  bool theme_changed = (current_theme != last_loaded_theme_2p);
+  
+  if (theme_changed)
+  {
+    printf("[LifeCounter2P] === THEME REFRESH TRIGGERED ===\n");
+    printf("[LifeCounter2P] Old theme: %p, New theme: %p\n", last_loaded_theme_2p, current_theme);
+    
+    // Clean up old background if exists
+    if (theme_background_2p)
+    {
+      lv_obj_del(theme_background_2p);
+      theme_background_2p = nullptr;
+      printf("[LifeCounter2P] Old background removed\n");
+    }
+    
+    // Create new background if theme is active
+    if (current_theme != nullptr && current_theme->background_image != nullptr)
+    {
+      // Create background image
+      theme_background_2p = lv_image_create(life_counter_container_2p);
+      lv_image_set_src(theme_background_2p, current_theme->background_image);
+      
+      // Scale to fill screen (360x360)
+      lv_obj_set_size(theme_background_2p, SCREEN_WIDTH, SCREEN_HEIGHT);
+      lv_obj_align(theme_background_2p, LV_ALIGN_CENTER, 0, 0);
+      
+      // Set opacity from theme configuration
+      lv_obj_set_style_opa(theme_background_2p, current_theme->background_opacity, 0);
+      
+      // Ensure background is not clickable and doesn't interfere with UI
+      lv_obj_clear_flag(theme_background_2p, LV_OBJ_FLAG_CLICKABLE);
+      lv_obj_add_flag(theme_background_2p, LV_OBJ_FLAG_IGNORE_LAYOUT);
+      
+      // Move to background (lowest z-order) - ensures all UI elements are on top
+      lv_obj_move_background(theme_background_2p);
+      
+      printf("[LifeCounter2P] New background loaded (opacity: %d)\n", current_theme->background_opacity);
+    }
+    else
+    {
+      printf("[LifeCounter2P] Theme OFF - no background\n");
+    }
+    
+    // Update last loaded theme
+    last_loaded_theme_2p = current_theme;
+    
+    // Force LVGL to redraw the screen
+    lv_obj_invalidate(life_counter_container_2p);
+    
+    printf("[LifeCounter2P] === THEME REFRESH COMPLETE ===\n");
+  }
+  else
+  {
+    printf("[LifeCounter2P] Theme unchanged - no refresh needed\n");
+  }
+}
+
 void teardown_life_counter_2P()
 {
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
@@ -310,6 +441,18 @@ void teardown_life_counter_2P()
   grouped_change_label_p1 = nullptr;
   grouped_change_label_p2 = nullptr;
   center_line = nullptr;
+  theme_background_2p = nullptr;  // Theme background cleanup
+  last_loaded_theme_2p = nullptr;  // Reset theme tracking
+}
+
+/**
+ * @brief Reset theme tracker to force refresh on next render
+ * 
+ * Used when preset changes in Automatic mode to ensure
+ * Life Counter theme updates immediately.
+ */
+void resetLastLoadedTheme2P() {
+  last_loaded_theme_2p = nullptr;  // Force refresh on next render
 }
 
 // Reset life total for Player 1

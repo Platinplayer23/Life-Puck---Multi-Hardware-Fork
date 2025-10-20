@@ -56,6 +56,7 @@
 #include "data/constants.h"
 #include "data/history.h"
 #include "data/tcg_presets.h"
+#include "data/themes.h"
 
 lv_obj_t *contextual_menu = nullptr;
 lv_obj_t *settings_menu = nullptr;
@@ -172,12 +173,12 @@ void show_tcg_result_popup(const char* title, const char* result) {
   lv_obj_center(popup);
   lv_obj_set_style_bg_color(popup, lv_color_hex(0x202020), 0);
   lv_obj_set_style_border_width(popup, 3, 0);
-  lv_obj_set_style_border_color(popup, LIGHTNING_BLUE_COLOR, 0);
+  lv_obj_set_style_border_color(popup, getThemeButtonColor(), 0);  // Use theme color
   lv_obj_set_style_radius(popup, 20, 0);
   
   lv_obj_t *lbl_title = lv_label_create(popup);
   lv_label_set_text(lbl_title, title);
-  lv_obj_set_style_text_color(lbl_title, LIGHTNING_BLUE_COLOR, 0);
+  lv_obj_set_style_text_color(lbl_title, getThemeButtonColor(), 0);  // Use theme color
   lv_obj_align(lbl_title, LV_ALIGN_TOP_MID, 0, 15);
   
   lv_obj_t *lbl_result = lv_label_create(popup);
@@ -268,14 +269,14 @@ void renderDiceListMenu() {
   
   lv_obj_t *title = lv_label_create(dice_list_menu);
   lv_label_set_text(title, "DICE");
-  lv_obj_set_style_text_color(title, LIGHTNING_BLUE_COLOR, 0);
+  lv_obj_set_style_text_color(title, getThemeTextColor(), 0);  // Use theme text color
   lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
   lv_obj_set_style_pad_bottom(title, 10, 0);
   
   for (int i = 0; i < DICE_TYPE_COUNT; i++) {
     lv_obj_t *btn = lv_btn_create(dice_list_menu);
     lv_obj_set_size(btn, 160, 40);
-    lv_obj_set_style_bg_color(btn, LIGHTNING_BLUE_COLOR, 0);
+    lv_obj_set_style_bg_color(btn, getThemeButtonColor(), 0);  // Use theme color
     lv_obj_set_user_data(btn, (void*)(intptr_t)i);
     lv_obj_add_event_cb(btn, [](lv_event_t *e) {
       lv_obj_t *target = (lv_obj_t*)lv_event_get_target(e);
@@ -288,6 +289,7 @@ void renderDiceListMenu() {
     
     lv_obj_t *lbl = lv_label_create(btn);
     lv_label_set_text(lbl, DICE_TYPES[i].name);
+    lv_obj_set_style_text_color(lbl, getThemeTextColor(), 0);  // Theme text color
     lv_obj_center(lbl);
   }
   
@@ -375,14 +377,14 @@ void renderPresetListMenu() {
   
   lv_obj_t *title = lv_label_create(preset_list_menu);
   lv_label_set_text(title, "PRESETS");
-  lv_obj_set_style_text_color(title, LIGHTNING_BLUE_COLOR, 0);
+  lv_obj_set_style_text_color(title, getThemeTextColor(), 0);  // Use theme text color
   lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
   lv_obj_set_style_pad_bottom(title, 10, 0);
   
   for (int i = 0; i < TCG_PRESET_COUNT; i++) {
     lv_obj_t *btn = lv_btn_create(preset_list_menu);
     lv_obj_set_size(btn, 180, 45);
-    lv_obj_set_style_bg_color(btn, LIGHTNING_BLUE_COLOR, 0);
+    lv_obj_set_style_bg_color(btn, getThemeButtonColor(), 0);  // Use theme color
     lv_obj_set_user_data(btn, (void*)(intptr_t)i);
     lv_obj_add_event_cb(btn, [](lv_event_t *e) {
       lv_obj_t *target = (lv_obj_t*)lv_event_get_target(e);
@@ -394,6 +396,20 @@ void renderPresetListMenu() {
       player_store.putInt(KEY_LIFE_STEP_SMALL, preset.small_step);
       player_store.putInt(KEY_LIFE_STEP_LARGE, preset.large_step);
       
+      // Save active preset index for theme system
+      player_store.putInt("preset_idx", idx);
+      
+      // If Automatic mode is active, reset theme trackers to force refresh
+      int theme_mode = player_store.getInt(KEY_THEME_MODE, THEME_MODE_OFF);
+      if (theme_mode == THEME_MODE_AUTOMATIC) {
+        extern void resetLastLoadedTheme();     // Single player
+        extern void resetLastLoadedTheme2P();   // Two player  
+        extern void resetLastSettingsTheme();   // Settings menu
+        resetLastLoadedTheme();
+        resetLastLoadedTheme2P();
+        resetLastSettingsTheme();
+      }
+      
       ui_init();
       renderMenu(MENU_NONE);
     }, LV_EVENT_CLICKED, NULL);
@@ -402,6 +418,7 @@ void renderPresetListMenu() {
     char buf[64];
     snprintf(buf, sizeof(buf), "%s (%d)", TCG_PRESETS[i].name, TCG_PRESETS[i].starting_life);
     lv_label_set_text(lbl, buf);
+    lv_obj_set_style_text_color(lbl, getThemeTextColor(), 0);  // Theme text color
     lv_obj_center(lbl);
   }
   
@@ -441,40 +458,53 @@ void renderContextualMenuOverlay(bool animate_menu)
   int ring_radius = circle_radius;
   
   if (current_menu_page == 0) {
+    // Get theme icon color
+    lv_color_t icon_color = getThemeIconColor();
+    
     lv_obj_t *lbl_tl = lv_label_create(contextual_menu);
     lv_label_set_text(lbl_tl, LV_SYMBOL_SETTINGS);
     lv_obj_set_style_text_font(lbl_tl, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(lbl_tl, icon_color, 0);  // Apply theme icon color
     lv_obj_align(lbl_tl, LV_ALIGN_CENTER, -ring_radius / 2, -ring_radius / 2);
 
     lv_obj_t *lbl_tr = lv_label_create(contextual_menu);
     const char *lbl_text = player_store.getInt(KEY_PLAYER_MODE, PLAYER_MODE_ONE_PLAYER) == PLAYER_MODE_ONE_PLAYER ? "2P" : "1P";
     lv_label_set_text(lbl_tr, lbl_text);
     lv_obj_set_style_text_font(lbl_tr, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(lbl_tr, icon_color, 0);  // Apply theme icon color
     lv_obj_align(lbl_tr, LV_ALIGN_CENTER, ring_radius / 2, -ring_radius / 2);
 
     lv_obj_t *lbl_bl = lv_label_create(contextual_menu);
     lv_label_set_text(lbl_bl, LV_SYMBOL_REFRESH);
     lv_obj_set_style_text_font(lbl_bl, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(lbl_bl, icon_color, 0);  // Apply theme icon color
     lv_obj_align(lbl_bl, LV_ALIGN_CENTER, -ring_radius / 2, ring_radius / 2);
 
     lv_obj_t *lbl_br = lv_label_create(contextual_menu);
     lv_label_set_text(lbl_br, LV_SYMBOL_LIST);
     lv_obj_set_style_text_font(lbl_br, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(lbl_br, icon_color, 0);  // Apply theme icon color
     lv_obj_align(lbl_br, LV_ALIGN_CENTER, ring_radius / 2, ring_radius / 2);
   } else {
+    // Get theme icon color (Page 2: Dice/Coin/History)
+    lv_color_t icon_color = getThemeIconColor();
+    
     lv_obj_t *lbl_tl = lv_label_create(contextual_menu);
     lv_label_set_text(lbl_tl, "D");
     lv_obj_set_style_text_font(lbl_tl, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(lbl_tl, icon_color, 0);  // Apply theme icon color
     lv_obj_align(lbl_tl, LV_ALIGN_CENTER, -ring_radius / 2, -ring_radius / 2);
 
     lv_obj_t *lbl_tr = lv_label_create(contextual_menu);
     lv_label_set_text(lbl_tr, "C");
     lv_obj_set_style_text_font(lbl_tr, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(lbl_tr, icon_color, 0);  // Apply theme icon color
     lv_obj_align(lbl_tr, LV_ALIGN_CENTER, ring_radius / 2, -ring_radius / 2);
 
     lv_obj_t *lbl_bl = lv_label_create(contextual_menu);
     lv_label_set_text(lbl_bl, LV_SYMBOL_DOWNLOAD);
     lv_obj_set_style_text_font(lbl_bl, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(lbl_bl, icon_color, 0);  // Apply theme icon color
     lv_obj_align(lbl_bl, LV_ALIGN_CENTER, -ring_radius / 2, ring_radius / 2);
   }
 
@@ -547,7 +577,7 @@ void renderContextualMenuOverlay(bool animate_menu)
     lv_obj_clear_flag(dot, LV_OBJ_FLAG_CLICKABLE);
     
     if (i == current_menu_page) {
-      lv_obj_set_style_bg_color(dot, LIGHTNING_BLUE_COLOR, 0);
+      lv_obj_set_style_bg_color(dot, getThemeButtonColor(), 0);  // Use theme color for active page indicator
       lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
     } else {
       lv_obj_set_style_bg_color(dot, lv_color_hex(0x666666), 0);
@@ -623,6 +653,7 @@ void renderMenu(MenuState menuType, bool animate_menu)
     currentMenu = MENU_POWER_SETTINGS;
     break;
   case MENU_THEME_SETTINGS:
+    refreshThemeSettingsColors();  // Update colors when returning to theme menu
     teardownThemeSettingsMenu();
     renderThemeSettingsMenu();
     currentMenu = MENU_THEME_SETTINGS;
@@ -683,9 +714,17 @@ void hideLifeScreen()
 void showLifeScreen()
 {
   if (life_counter_container)
+  {
     lv_obj_clear_flag(life_counter_container, LV_OBJ_FLAG_HIDDEN);
+    // Refresh theme if changed while in settings
+    refresh_life_counter_theme();
+  }
   if (life_counter_container_2p)
+  {
     lv_obj_clear_flag(life_counter_container_2p, LV_OBJ_FLAG_HIDDEN);
+    // Refresh theme if changed while in settings
+    refresh_life_counter_2p_theme();
+  }
 }
 
 void teardownAllMenus()

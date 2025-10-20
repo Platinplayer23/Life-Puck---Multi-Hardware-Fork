@@ -23,8 +23,10 @@
 // ============================================
 // Data Layer
 // ============================================
+#include "config.h"
 #include "data/constants.h"
 #include "data/tcg_presets.h"
+#include "data/themes.h"
 
 static lv_obj_t *preset_editor_menu = nullptr;
 static lv_obj_t *preset_editor_swipe_layer = nullptr;
@@ -47,14 +49,33 @@ struct SharedInputState
 static int temp_life = 0;
 static int temp_small = 0;
 static int temp_large = 0;
+static int temp_theme = 1;  // Default theme
 static int current_preset_idx = -1;
 
 static void show_name_popup(int preset_idx);
 static void show_values_popup(int preset_idx);
 static void close_name_popup();
 static void close_values_popup();
+static const char* getThemeName(int theme_id);
 static void save_preset_to_storage(int preset_idx);
 static void load_presets_from_storage();
+
+/**
+ * @brief Get theme name from theme ID
+ * 
+ * @param theme_id Theme ID (0=Off, 1=Yugioh, 2=Magic, 3=Pokemon, 4=Default)
+ * @return const char* Theme name string
+ */
+static const char* getThemeName(int theme_id) {
+  switch (theme_id) {
+    case 0: return "Off";
+    case 1: return "Yugioh";
+    case 2: return "Magic";
+    case 3: return "Pokemon";
+    case 4: return "Default";
+    default: return "Off";
+  }
+}
 
 static const char *kb_map[] = {
     "7", "8", "9", "\n",
@@ -441,6 +462,29 @@ static void show_values_popup(int preset_idx) {
   temp_small = TCG_PRESETS[preset_idx].small_step;
   temp_large = TCG_PRESETS[preset_idx].large_step;
   
+  // Load theme from NVS (user override) or config.h default
+  char theme_key[20];
+  snprintf(theme_key, sizeof(theme_key), "preset_%d_theme", preset_idx);
+  
+  // Get default theme for this preset from config.h
+  int default_theme;
+  switch (preset_idx) {
+    case 0: default_theme = PRESET_0_THEME; break;      // MTG Standard → Magic (2)
+    case 1: default_theme = PRESET_1_THEME; break;      // MTG Commander → Magic (2)
+    case 2: default_theme = PRESET_2_THEME; break;      // Pokemon TCG → Pokemon (3)
+    case 3: default_theme = PRESET_3_THEME; break;      // Yu-Gi-Oh! → Yugioh (1)
+    case 4: default_theme = PRESET_4_THEME; break;      // Flesh & Blood → (from config.h)
+    case 5: default_theme = PRESET_5_THEME; break;      // Lorcana → (from config.h)
+    case 6: default_theme = PRESET_6_THEME; break;      // One Piece TCG → (from config.h)
+    case 7: default_theme = PRESET_7_THEME; break;      // Custom 8 → (from config.h)
+    case 8: default_theme = PRESET_8_THEME; break;      // Custom 9 → (from config.h)
+    case 9: default_theme = PRESET_9_THEME; break;      // Custom 10 → (from config.h)
+    default: default_theme = THEME_YUGIOH; break;       // Fallback: Yugioh (1)
+  }
+  
+  // Load from NVS (user override) or use config.h default
+  temp_theme = player_store.getInt(theme_key, default_theme);
+  
   values_popup = lv_obj_create(lv_scr_act());
   lv_obj_set_size(values_popup, SCREEN_WIDTH, SCREEN_HEIGHT);
   lv_obj_set_style_bg_color(values_popup, BLACK_COLOR, LV_PART_MAIN);
@@ -450,8 +494,13 @@ static void show_values_popup(int preset_idx) {
   lv_obj_set_style_radius(values_popup, LV_RADIUS_CIRCLE, LV_PART_MAIN);
   lv_obj_set_style_pad_all(values_popup, 16, LV_PART_MAIN);
 
+  // Enable vertical scrolling for Theme button visibility
+  lv_obj_set_scroll_dir(values_popup, LV_DIR_VER);
+  lv_obj_set_scrollbar_mode(values_popup, LV_SCROLLBAR_MODE_AUTO);
+
+  // Reduced row heights to fit better: 60px rows + extra spacer row for scrolling
   static lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t row_dsc[] = {70, 70, 70, 70, LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t row_dsc[] = {60, 60, 60, 60, 60, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};  // 5 rows + spacer
   lv_obj_set_grid_dsc_array(values_popup, col_dsc, row_dsc);
   lv_obj_set_layout(values_popup, LV_LAYOUT_GRID);
 
@@ -473,6 +522,11 @@ static void show_values_popup(int preset_idx) {
                         TCG_PRESETS[idx].small_step = temp_small;
                         TCG_PRESETS[idx].large_step = temp_large;
                         
+                        // Save theme for ALL presets (0-9)
+                        char theme_key[20];
+                        snprintf(theme_key, sizeof(theme_key), "preset_%d_theme", idx);
+                        player_store.putInt(theme_key, temp_theme);
+                        
                         save_preset_to_storage(idx);
                         
                         close_values_popup();
@@ -486,6 +540,7 @@ static void show_values_popup(int preset_idx) {
 
   lv_obj_t *btn_max_life = lv_btn_create(values_popup);
   lv_obj_set_size(btn_max_life, 80, 40);
+  lv_obj_set_style_bg_color(btn_max_life, lv_color_hex(0x0070FF), LV_PART_MAIN);  // Blue
   lv_obj_set_style_text_font(btn_max_life, &lv_font_montserrat_24, 0);
   lv_obj_set_grid_cell(btn_max_life, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
   lv_obj_t *lbl_max_life_val = lv_label_create(btn_max_life);
@@ -502,6 +557,7 @@ static void show_values_popup(int preset_idx) {
 
   lv_obj_t *btn_small_step = lv_btn_create(values_popup);
   lv_obj_set_size(btn_small_step, 80, 40);
+  lv_obj_set_style_bg_color(btn_small_step, lv_color_hex(0x0070FF), LV_PART_MAIN);  // Blue
   lv_obj_set_style_text_font(btn_small_step, &lv_font_montserrat_24, 0);
   lv_obj_set_grid_cell(btn_small_step, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 2, 1);
   lv_obj_t *lbl_small_step_val = lv_label_create(btn_small_step);
@@ -517,12 +573,48 @@ static void show_values_popup(int preset_idx) {
 
   lv_obj_t *btn_large_step = lv_btn_create(values_popup);
   lv_obj_set_size(btn_large_step, 80, 40);
+  lv_obj_set_style_bg_color(btn_large_step, lv_color_hex(0x0070FF), LV_PART_MAIN);  // Blue
   lv_obj_set_style_text_font(btn_large_step, &lv_font_montserrat_24, 0);
   lv_obj_set_grid_cell(btn_large_step, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
   lv_obj_t *lbl_large_step_val = lv_label_create(btn_large_step);
   snprintf(buf, sizeof(buf), "%d", temp_large);
   lv_label_set_text(lbl_large_step_val, buf);
   lv_obj_center(lbl_large_step_val);
+
+  // Theme Button (available for ALL presets)
+  lv_obj_t *lbl_theme = lv_label_create(values_popup);
+  lv_label_set_text(lbl_theme, "Theme");
+  lv_obj_set_style_text_font(lbl_theme, &lv_font_montserrat_24, 0);
+  lv_obj_set_style_text_color(lbl_theme, lv_color_white(), 0);
+  lv_obj_set_grid_cell(lbl_theme, LV_GRID_ALIGN_END, 0, 1, LV_GRID_ALIGN_CENTER, 4, 1);
+
+  lv_obj_t *btn_theme = lv_btn_create(values_popup);
+  lv_obj_set_size(btn_theme, 120, 40);
+  lv_obj_set_style_bg_color(btn_theme, lv_color_hex(0x0070FF), LV_PART_MAIN);  // Blue like other buttons
+  lv_obj_set_style_text_font(btn_theme, &lv_font_montserrat_20, 0);
+  lv_obj_set_grid_cell(btn_theme, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
+  lv_obj_t *lbl_theme_val = lv_label_create(btn_theme);
+  lv_label_set_text(lbl_theme_val, getThemeName(temp_theme));
+  lv_obj_set_style_text_color(lbl_theme_val, lv_color_white(), 0);  // White text
+  lv_obj_center(lbl_theme_val);
+  
+  lv_obj_add_event_cb(btn_theme, [](lv_event_t *e) {
+    // Cycle through all 5 themes: Off → Yugioh → Magic → Pokemon → Default → Off
+    temp_theme = (temp_theme + 1) % 5;
+    
+    lv_obj_t *btn = (lv_obj_t*)lv_event_get_target(e);
+    lv_obj_t *label = lv_obj_get_child(btn, 0);
+    lv_label_set_text(label, getThemeName(temp_theme));
+  }, LV_EVENT_CLICKED, NULL);
+
+  // Extra Spacer for Scrolling (Row 5, spanning both columns)
+  // This ensures Theme button is fully visible when scrolling down
+  lv_obj_t *extra_spacer = lv_obj_create(values_popup);
+  lv_obj_set_size(extra_spacer, 10, 250);  // 250px high for ample scrolling space
+  lv_obj_set_grid_cell(extra_spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 5, 1);  // Row 5
+  lv_obj_set_style_bg_opa(extra_spacer, LV_OPA_TRANSP, 0);  // Invisible
+  lv_obj_set_style_border_opa(extra_spacer, LV_OPA_TRANSP, 0);  // No border
+  lv_obj_clear_flag(extra_spacer, LV_OBJ_FLAG_CLICKABLE);  // Not clickable
 
   static SharedInputState shared_input_state = {nullptr, nullptr, nullptr, nullptr};
 

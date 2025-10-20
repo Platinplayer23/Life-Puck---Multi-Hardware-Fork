@@ -12,6 +12,7 @@ void power_set_brightness(int level); // Level 0-100 (for compatibility)
 void power_sleep_display();
 void power_wake_display();
 void power_apply_battery_saver();
+void power_suspend(bool suspend); // Suspend/resume power management (for calibration)
 
 #endif // POWER_MANAGEMENT_H
 

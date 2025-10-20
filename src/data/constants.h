@@ -1,5 +1,6 @@
 #pragma once
 #include "lvgl.h"
+#include "config.h"
 
 #define SCREEN_WIDTH 360
 #define SCREEN_HEIGHT 360
@@ -8,7 +9,7 @@
 
 // *** SMOOTH ANIMATION CONSTANTS ***
 #define SMOOTH_ARC_STEPS 1000        // High-resolution animation steps for smooth arcs
-#define ARC_ANIMATION_DURATION 600   // Noch langsamer für elegantere Animation (war 300ms)
+// ARC_ANIMATION_DURATION now defined in config.h
 
 typedef struct
 {
@@ -21,7 +22,7 @@ typedef struct
 #define PLAYER_SINGLE 0
 #define PLAYER_ONE 1
 #define PLAYER_TWO 2
-#define GROUPER_WINDOW 500  // Reduced from 2000ms for faster auto-save
+// GROUPER_WINDOW now defined in config.h
 
 enum PlayerMode
 {
@@ -83,6 +84,11 @@ enum ContextualQuadrant
 #define KEY_THEME_MODE "theme_mode"       // NEW: Theme Mode (0=OFF, 1=Automatic, 2=Manual)
 #define KEY_THEME_SELECTION "theme_sel"   // NEW: Theme Selection (0=Default, 1=Yugioh, 2=Magic, 3=Pokemon)
 
+// Custom Preset Theme NVS Keys
+#define KEY_PRESET_7_THEME "preset_7_theme"  // Custom 8 theme
+#define KEY_PRESET_8_THEME "preset_8_theme"  // Custom 9 theme
+#define KEY_PRESET_9_THEME "preset_9_theme"  // Custom 10 theme
+
 // *** PERSISTENT LIFE VALUES ***
 #define KEY_SAVED_LIFE_P1 "saved_life_p1"    // Single player or Player 1 life
 #define KEY_SAVED_LIFE_P2 "saved_life_p2"    // Player 2 life (two-player mode)
@@ -109,8 +115,9 @@ enum ThemeMode
 
 enum ThemeSelection
 {
-  THEME_DEFAULT = 0,
-  THEME_YUGIOH = 1,
-  THEME_MAGIC = 2,
-  THEME_POKEMON = 3
+  THEME_OFF = 0,        // No theme - standard blue buttons, no background
+  THEME_YUGIOH = 1,     // Gold theme
+  THEME_MAGIC = 2,      // Purple theme (MTG)
+  THEME_POKEMON = 3,    // Red theme
+  THEME_DEFAULT = 4     // Blue theme with logo background
 };

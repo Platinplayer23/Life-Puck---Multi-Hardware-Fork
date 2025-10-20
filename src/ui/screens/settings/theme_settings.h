@@ -21,5 +21,13 @@ extern "C"
    * and resets the internal pointer to nullptr.
    */
   void teardownThemeSettingsMenu();
+
+  /**
+   * @brief Refresh theme colors in theme settings menu
+   * 
+   * Updates button and text colors when returning to theme settings menu
+   * after theme changes. Called from settings_overlay.cpp.
+   */
+  void refreshThemeSettingsColors();
 }
 

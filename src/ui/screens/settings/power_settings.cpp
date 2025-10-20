@@ -1,5 +1,7 @@
 #include "power_settings.h"
+#include "config.h"
 #include "data/constants.h"
+#include "data/themes.h"
 #include "ui/screens/menu/menu.h"
 #include "ui/screens/settings/brightness.h"
 #include "core/state_manager.h"
@@ -35,7 +37,7 @@ static String formatTime(int seconds) {
 
 // Helper function to get current auto-dim index
 static int getAutoDimIndex() {
-  int current = player_store.getInt(KEY_AUTO_DIM_TIME, 60); // Default: 1min
+  int current = player_store.getInt(KEY_AUTO_DIM_TIME, AUTO_DIM_DEFAULT);
   for (int i = 0; i < AUTO_DIM_COUNT; i++) {
     if (AUTO_DIM_OPTIONS[i] == current) return i;
   }
@@ -44,7 +46,7 @@ static int getAutoDimIndex() {
 
 // Helper function to get current sleep index
 static int getSleepIndex() {
-  int current = player_store.getInt(KEY_SLEEP_TIME, 300); // Default: 5min
+  int current = player_store.getInt(KEY_SLEEP_TIME, SLEEP_DEFAULT);
   for (int i = 0; i < SLEEP_COUNT; i++) {
     if (SLEEP_OPTIONS[i] == current) return i;
   }
@@ -58,11 +60,13 @@ static void updateAutoDimButton(lv_obj_t *btn) {
   String text = "Auto-Dim: " + formatTime(value);
   lv_label_set_text(lbl_auto_dim, text.c_str());
   
-  // Gray out if OFF
+  // Gray out if OFF, theme color if ON
   if (value == 0) {
     lv_obj_set_style_bg_color(btn, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_text_color(lbl_auto_dim, lv_color_white(), 0);  // White on gray
   } else {
-    lv_obj_set_style_bg_color(btn, LIGHTNING_BLUE_COLOR, 0);
+    lv_obj_set_style_bg_color(btn, getThemeButtonColor(), 0);
+    lv_obj_set_style_text_color(lbl_auto_dim, getThemeTextColor(), 0);  // Theme text on theme button
   }
 }
 
@@ -72,24 +76,28 @@ static void updateSleepButton(lv_obj_t *btn) {
   String text = "Sleep: " + formatTime(value);
   lv_label_set_text(lbl_sleep, text.c_str());
   
-  // Gray out if OFF
+  // Gray out if OFF, theme color if ON
   if (value == 0) {
     lv_obj_set_style_bg_color(btn, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_text_color(lbl_sleep, lv_color_white(), 0);  // White on gray
   } else {
-    lv_obj_set_style_bg_color(btn, LIGHTNING_BLUE_COLOR, 0);
+    lv_obj_set_style_bg_color(btn, getThemeButtonColor(), 0);
+    lv_obj_set_style_text_color(lbl_sleep, getThemeTextColor(), 0);  // Theme text on theme button
   }
 }
 
 static void updateBatterySaverButton(lv_obj_t *btn) {
-  bool enabled = player_store.getInt(KEY_BATTERY_SAVER, 1) != 0; // Default: ON
+  bool enabled = player_store.getInt(KEY_BATTERY_SAVER, LOW_BATTERY_DIM_DEFAULT) != 0;
   String text = "Low Battery Dimming: " + String(enabled ? "ON" : "OFF");
   lv_label_set_text(lbl_battery_saver, text.c_str());
   
-  // Gray out if OFF
+  // Gray out if OFF, theme color if ON
   if (!enabled) {
     lv_obj_set_style_bg_color(btn, lv_color_hex(0x444444), 0);
+    lv_obj_set_style_text_color(lbl_battery_saver, lv_color_white(), 0);  // White on gray
   } else {
-    lv_obj_set_style_bg_color(btn, LIGHTNING_BLUE_COLOR, 0);
+    lv_obj_set_style_bg_color(btn, getThemeButtonColor(), 0);
+    lv_obj_set_style_text_color(lbl_battery_saver, getThemeTextColor(), 0);  // Theme text on theme button
   }
 }
 
@@ -140,11 +148,12 @@ void renderPowerSettingsMenu()
   // Brightness Button (Row 2, Full Width)
   lv_obj_t *btn_brightness = lv_btn_create(power_settings_menu);
   lv_obj_set_size(btn_brightness, 280, 50);
-  lv_obj_set_style_bg_color(btn_brightness, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_brightness, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_brightness, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_t *lbl_brightness = lv_label_create(btn_brightness);
   lv_label_set_text(lbl_brightness, "Brightness");
   lv_obj_set_style_text_font(lbl_brightness, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(lbl_brightness, getThemeTextColor(), 0);  // Theme text color
   lv_obj_center(lbl_brightness);
   lv_obj_add_event_cb(btn_brightness, [](lv_event_t *e) {
     renderBrightnessOverlay(MENU_POWER_SETTINGS);
@@ -153,12 +162,13 @@ void renderPowerSettingsMenu()
   // Auto-Dim Button (Row 3, Full Width)
   lv_obj_t *btn_auto_dim = lv_btn_create(power_settings_menu);
   lv_obj_set_size(btn_auto_dim, 280, 50);
-  lv_obj_set_style_bg_color(btn_auto_dim, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_auto_dim, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_auto_dim, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 3, 1);
   lbl_auto_dim = lv_label_create(btn_auto_dim);
   lv_obj_set_style_text_font(lbl_auto_dim, &lv_font_montserrat_18, 0);
   lv_obj_center(lbl_auto_dim);
   
+  // Text color set by updateAutoDimButton()
   updateAutoDimButton(btn_auto_dim);
   
   lv_obj_add_event_cb(btn_auto_dim, [](lv_event_t *e) {
@@ -176,12 +186,13 @@ void renderPowerSettingsMenu()
   // Sleep Button (Row 4, Full Width)
   lv_obj_t *btn_sleep = lv_btn_create(power_settings_menu);
   lv_obj_set_size(btn_sleep, 280, 50);
-  lv_obj_set_style_bg_color(btn_sleep, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_sleep, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_sleep, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
   lbl_sleep = lv_label_create(btn_sleep);
   lv_obj_set_style_text_font(lbl_sleep, &lv_font_montserrat_18, 0);
   lv_obj_center(lbl_sleep);
   
+  // Text color set by updateSleepButton()
   updateSleepButton(btn_sleep);
   
   lv_obj_add_event_cb(btn_sleep, [](lv_event_t *e) {
@@ -199,12 +210,13 @@ void renderPowerSettingsMenu()
   // Battery Saver Button (Row 5, Full Width)
   lv_obj_t *btn_battery_saver = lv_btn_create(power_settings_menu);
   lv_obj_set_size(btn_battery_saver, 280, 50);
-  lv_obj_set_style_bg_color(btn_battery_saver, LIGHTNING_BLUE_COLOR, LV_PART_MAIN);
+  lv_obj_set_style_bg_color(btn_battery_saver, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_battery_saver, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 5, 1);
   lbl_battery_saver = lv_label_create(btn_battery_saver);
   lv_obj_set_style_text_font(lbl_battery_saver, &lv_font_montserrat_18, 0);
   lv_obj_center(lbl_battery_saver);
   
+  // Text color set by updateBatterySaverButton()
   updateBatterySaverButton(btn_battery_saver);
   
   lv_obj_add_event_cb(btn_battery_saver, [](lv_event_t *e) {

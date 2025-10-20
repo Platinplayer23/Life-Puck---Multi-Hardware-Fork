@@ -1,6 +1,7 @@
 #include "tcg_presets.h"
 #include "core/state_manager.h"
 #include "ui/screens/menu/menu.h"
+#include "config.h"  // For preset definitions
 #include <cstring>
 
 TCGPreset TCG_PRESETS[10];
@@ -18,65 +19,67 @@ int current_preset_index = 0;
  * These serve as factory defaults and fallback values.
  */
 void init_default_presets() {
+    // All preset values are now defined in config.h for easy editing
+    
     // ---- SLOT 0: MTG Standard ----
-    strncpy(TCG_PRESETS[0].name, "MTG Standard", sizeof(TCG_PRESETS[0].name) - 1);
-    TCG_PRESETS[0].starting_life = 20;
-    TCG_PRESETS[0].small_step = 1;
-    TCG_PRESETS[0].large_step = 5;
+    strncpy(TCG_PRESETS[0].name, PRESET_0_NAME, sizeof(TCG_PRESETS[0].name) - 1);
+    TCG_PRESETS[0].starting_life = PRESET_0_STARTING_LIFE;
+    TCG_PRESETS[0].small_step = PRESET_0_SMALL_STEP;
+    TCG_PRESETS[0].large_step = PRESET_0_LARGE_STEP;
 
     // ---- SLOT 1: MTG Commander ----
-    strncpy(TCG_PRESETS[1].name, "MTG Commander", sizeof(TCG_PRESETS[1].name) - 1);
-    TCG_PRESETS[1].starting_life = 40;
-    TCG_PRESETS[1].small_step = 1;
-    TCG_PRESETS[1].large_step = 10;
+    strncpy(TCG_PRESETS[1].name, PRESET_1_NAME, sizeof(TCG_PRESETS[1].name) - 1);
+    TCG_PRESETS[1].starting_life = PRESET_1_STARTING_LIFE;
+    TCG_PRESETS[1].small_step = PRESET_1_SMALL_STEP;
+    TCG_PRESETS[1].large_step = PRESET_1_LARGE_STEP;
 
     // ---- SLOT 2: Pokemon TCG ----
-    strncpy(TCG_PRESETS[2].name, "Pokemon TCG", sizeof(TCG_PRESETS[2].name) - 1);
-    TCG_PRESETS[2].starting_life = 60;
-    TCG_PRESETS[2].small_step = 10;
-    TCG_PRESETS[2].large_step = 30;
+    strncpy(TCG_PRESETS[2].name, PRESET_2_NAME, sizeof(TCG_PRESETS[2].name) - 1);
+    TCG_PRESETS[2].starting_life = PRESET_2_STARTING_LIFE;
+    TCG_PRESETS[2].small_step = PRESET_2_SMALL_STEP;
+    TCG_PRESETS[2].large_step = PRESET_2_LARGE_STEP;
 
     // ---- SLOT 3: Yu-Gi-Oh! ----
-    strncpy(TCG_PRESETS[3].name, "Yu-Gi-Oh!", sizeof(TCG_PRESETS[3].name) - 1);
-    TCG_PRESETS[3].starting_life = 8000;
-    TCG_PRESETS[3].small_step = 50;
-    TCG_PRESETS[3].large_step = 500;
+    strncpy(TCG_PRESETS[3].name, PRESET_3_NAME, sizeof(TCG_PRESETS[3].name) - 1);
+    TCG_PRESETS[3].starting_life = PRESET_3_STARTING_LIFE;
+    TCG_PRESETS[3].small_step = PRESET_3_SMALL_STEP;
+    TCG_PRESETS[3].large_step = PRESET_3_LARGE_STEP;
     
-    // ---- SLOT 4: Flesh and Blood ----
-    strncpy(TCG_PRESETS[4].name, "Flesh & Blood", sizeof(TCG_PRESETS[4].name) - 1);
-    TCG_PRESETS[4].starting_life = 40;
-    TCG_PRESETS[4].small_step = 1;
-    TCG_PRESETS[4].large_step = 5;
+    // ---- SLOT 4: Flesh & Blood ----
+    strncpy(TCG_PRESETS[4].name, PRESET_4_NAME, sizeof(TCG_PRESETS[4].name) - 1);
+    TCG_PRESETS[4].starting_life = PRESET_4_STARTING_LIFE;
+    TCG_PRESETS[4].small_step = PRESET_4_SMALL_STEP;
+    TCG_PRESETS[4].large_step = PRESET_4_LARGE_STEP;
 
     // ---- SLOT 5: Lorcana ----
-    strncpy(TCG_PRESETS[5].name, "Lorcana", sizeof(TCG_PRESETS[5].name) - 1);
-    TCG_PRESETS[5].starting_life = 20;
-    TCG_PRESETS[5].small_step = 1;
-    TCG_PRESETS[5].large_step = 5;
+    strncpy(TCG_PRESETS[5].name, PRESET_5_NAME, sizeof(TCG_PRESETS[5].name) - 1);
+    TCG_PRESETS[5].starting_life = PRESET_5_STARTING_LIFE;
+    TCG_PRESETS[5].small_step = PRESET_5_SMALL_STEP;
+    TCG_PRESETS[5].large_step = PRESET_5_LARGE_STEP;
 
     // ---- SLOT 6: One Piece TCG ----
-    strncpy(TCG_PRESETS[6].name, "One Piece TCG", sizeof(TCG_PRESETS[6].name) - 1);
-    TCG_PRESETS[6].starting_life = 5;
-    TCG_PRESETS[6].small_step = 1;
-    TCG_PRESETS[6].large_step = 2;
+    strncpy(TCG_PRESETS[6].name, PRESET_6_NAME, sizeof(TCG_PRESETS[6].name) - 1);
+    TCG_PRESETS[6].starting_life = PRESET_6_STARTING_LIFE;
+    TCG_PRESETS[6].small_step = PRESET_6_SMALL_STEP;
+    TCG_PRESETS[6].large_step = PRESET_6_LARGE_STEP;
 
-    // ---- SLOT 7: Custom ----
-    strncpy(TCG_PRESETS[7].name, "Custom 8", sizeof(TCG_PRESETS[7].name) - 1);
-    TCG_PRESETS[7].starting_life = 20;
-    TCG_PRESETS[7].small_step = 1;
-    TCG_PRESETS[7].large_step = 5;
+    // ---- SLOT 7: Custom 8 ----
+    strncpy(TCG_PRESETS[7].name, PRESET_7_NAME, sizeof(TCG_PRESETS[7].name) - 1);
+    TCG_PRESETS[7].starting_life = PRESET_7_STARTING_LIFE;
+    TCG_PRESETS[7].small_step = PRESET_7_SMALL_STEP;
+    TCG_PRESETS[7].large_step = PRESET_7_LARGE_STEP;
 
-    // ---- SLOT 8: Custom ----
-    strncpy(TCG_PRESETS[8].name, "Custom 9", sizeof(TCG_PRESETS[8].name) - 1);
-    TCG_PRESETS[8].starting_life = 20;
-    TCG_PRESETS[8].small_step = 1;
-    TCG_PRESETS[8].large_step = 5;
+    // ---- SLOT 8: Custom 9 ----
+    strncpy(TCG_PRESETS[8].name, PRESET_8_NAME, sizeof(TCG_PRESETS[8].name) - 1);
+    TCG_PRESETS[8].starting_life = PRESET_8_STARTING_LIFE;
+    TCG_PRESETS[8].small_step = PRESET_8_SMALL_STEP;
+    TCG_PRESETS[8].large_step = PRESET_8_LARGE_STEP;
 
-    // ---- SLOT 9: Custom ----
-    strncpy(TCG_PRESETS[9].name, "Custom 10", sizeof(TCG_PRESETS[9].name) - 1);
-    TCG_PRESETS[9].starting_life = 20;
-    TCG_PRESETS[9].small_step = 1;
-    TCG_PRESETS[9].large_step = 5;
+    // ---- SLOT 9: Custom 10 ----
+    strncpy(TCG_PRESETS[9].name, PRESET_9_NAME, sizeof(TCG_PRESETS[9].name) - 1);
+    TCG_PRESETS[9].starting_life = PRESET_9_STARTING_LIFE;
+    TCG_PRESETS[9].small_step = PRESET_9_SMALL_STEP;
+    TCG_PRESETS[9].large_step = PRESET_9_LARGE_STEP;
 }
 
 // ============================================
