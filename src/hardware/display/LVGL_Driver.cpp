@@ -1,6 +1,7 @@
 #include "lvgl_driver.h"
 #include "hardware/system/power_management.h"
 #include "ui/screens/menu/menu.h"  // For getCurrentMenu() and MENU_TOUCH_CALIBRATION
+#include "config.h"  // For touch calibration defaults
 #include <cstring>  // Für memcpy
 
 static lv_display_t *display;
@@ -23,17 +24,18 @@ static lv_indev_t *indev;
 // [6] = divisor    - Matrix-Divisor (normalerweise 1.0)
 //
 // ============================================
-// === HIER die Default-Werte ändern! ===
+// === Touch Calibration Defaults from config.h ===
 // ============================================
-// CENTRAL default matrix - accessible globally via lvgl_driver.h
+// CENTRAL default matrix - now loaded from config.h for easy editing
+// To change these values, edit src/config.h (Touch Calibration section)
 const float DEFAULT_CAL_MATRIX[7] = {
-    0.0f,   // [0] offset_x - Factory tested default + left -right offset
-    0.85f,   // [1] scale_x - Factory tested default higher than 1 expands touches outwards lower = inwards
-    0.0f,    // [2] shear_xy - No shear for default
-    0.0f,  // [3] offset_y - Factory tested default + top -bottom offset
-    0.0f,    // [4] shear_yx - No shear for default
-    0.90f,   // [5] scale_y - Factory tested default higher than 1 expands touches outwards lower = inwards
-    1.0f     // [6] divisor
+    TOUCH_CAL_DEFAULT_OFFSET_X,   // [0] offset_x - Horizontal offset
+    TOUCH_CAL_DEFAULT_SCALE_X,    // [1] scale_x - Horizontal scaling
+    TOUCH_CAL_DEFAULT_SHEAR_XY,   // [2] shear_xy - Rotation/shear
+    TOUCH_CAL_DEFAULT_OFFSET_Y,   // [3] offset_y - Vertical offset
+    TOUCH_CAL_DEFAULT_SHEAR_YX,   // [4] shear_yx - Rotation/shear
+    TOUCH_CAL_DEFAULT_SCALE_Y,    // [5] scale_y - Vertical scaling
+    TOUCH_CAL_DEFAULT_DIVISOR     // [6] divisor - Matrix divisor
 };
 
 // Global touch calibration matrix (wird automatisch mit DEFAULT_CAL_MATRIX initialisiert)

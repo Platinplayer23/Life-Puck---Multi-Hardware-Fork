@@ -26,9 +26,11 @@ float battery_get_volts(void)
 float battery_get_percent()
 {
   float volts = battery_get_volts();
-  // Li-Po battery voltage range: 3.0V (empty) to 4.2V (full)
+  // Li-Po battery voltage range: 3.0V (empty) to 4.16V (full measured)
+  // Updated from 4.2V to 4.16V for more accurate percentage calculation
+  // based on actual measured max voltage of this hardware
   float min_voltage = 3.0;
-  float max_voltage = 4.2;
+  float max_voltage = 4.16;
   // Calculate linear percentage based on voltage range
   float percent = ((volts - min_voltage) / (max_voltage - min_voltage)) * 100.0;
   // Clamp to valid percentage range

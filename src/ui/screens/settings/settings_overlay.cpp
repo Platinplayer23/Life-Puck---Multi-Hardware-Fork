@@ -126,15 +126,17 @@ void renderSettingsOverlay()
   lv_obj_set_layout(settings_menu, LV_LAYOUT_GRID);
   lv_obj_set_scrollbar_mode(settings_menu, LV_SCROLLBAR_MODE_AUTO);
 
-  // Battery indicator (Row 0 - top, centered)
+  // Battery indicator (Row 0 - top, centered) - Shows percentage and voltage
   lv_obj_t *battery_label = lv_label_create(settings_menu);
   lv_obj_set_grid_cell(battery_label, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
   lv_obj_set_style_text_font(battery_label, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(battery_label, lv_color_white(), 0);
   
   int battery_percentage = (int)(battery_get_percent() + 0.5f);
-  char battery_text[16];
-  snprintf(battery_text, sizeof(battery_text), LV_SYMBOL_BATTERY_FULL " %d%%", battery_percentage);
+  float battery_voltage = battery_get_volts();
+  char battery_text[32];
+  snprintf(battery_text, sizeof(battery_text), LV_SYMBOL_BATTERY_FULL " %d%% (%.2fV)", 
+           battery_percentage, battery_voltage);
   lv_label_set_text(battery_label, battery_text);
 
   // Back button (Row 1, Centered across both columns)
