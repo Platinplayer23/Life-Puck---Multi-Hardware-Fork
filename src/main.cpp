@@ -109,6 +109,10 @@ void setup()
     I2C_Init();
     TCA9554PWR_Init();
     
+    // Power button initialization (MUST be called early!)
+    power_init();
+    printf("[MAIN] Power button initialized\n");
+    
     // Note: Emergency reset via BOOT button removed - conflicts with download mode
     
     LCD_Init();

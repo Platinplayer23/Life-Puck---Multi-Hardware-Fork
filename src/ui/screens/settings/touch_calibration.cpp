@@ -9,7 +9,7 @@
 // - 2-Pass System: Coarse → Fine adjustment (seamless transition)
 // - Zone-based interactive calibration
 // - Automatic parameter adjustment based on touch position
-// - Optional rotation calibration
+// - rotation calibration
 // - Fallback confirmation system with auto-revert
 // =========================================================================
 

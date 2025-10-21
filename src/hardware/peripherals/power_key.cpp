@@ -26,6 +26,11 @@
 // ============================================
 #include "data/constants.h"
 
+// ============================================
+// Board Configuration
+// ============================================
+#include "board_config.h"
+
 
 // ### CORRECTION: Remove old, invalid declaration ###
 // extern esp_panel::board::Board *board;
@@ -60,16 +65,26 @@ void wake_up(void)
 {
     pinMode(PWR_KEY_Input_PIN, INPUT);
     pinMode(PWR_Control_PIN, OUTPUT);
+    
+#ifdef BOARD_1_85C
+    // C-Modell: Hat einen Schalter - sofort einschalten ohne Verzögerung
+    // Schalter bleibt in Position, keine Prüfung nötig
+    digitalWrite(PWR_Control_PIN, HIGH);
+    BAT_State = BAT_ON;
+    esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+    printf("[wake_up] Wakeup reason: %d (C-Modell mit Schalter - sofort)\n", wakeup_reason);
+#else
+    // Nicht-C-Modell: Hat einen Button - 100ms Sicherheitsverzögerung
+    // Verhindert versehentliches Einschalten (z.B. im Rucksack)
     digitalWrite(PWR_Control_PIN, LOW);
     vTaskDelay(100);
-    if (!digitalRead(PWR_KEY_Input_PIN))
-    {
+    if (!digitalRead(PWR_KEY_Input_PIN)) {
         BAT_State = BAT_ON;
         digitalWrite(PWR_Control_PIN, HIGH);
         esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-        printf("[wake_up] Wakeup reason: %d\n", wakeup_reason);
-        vTaskDelay(300);
+        printf("[wake_up] Wakeup reason: %d (Nicht-C-Modell mit Button - 100ms Check)\n", wakeup_reason);
     }
+#endif
 }
 
 void fall_asleep(void)
