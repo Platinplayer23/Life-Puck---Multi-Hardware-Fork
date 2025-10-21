@@ -2,6 +2,7 @@
 // Own Header (first!)
 // ============================================
 #include "settings_overlay.h"
+#include "counters_settings.h"
 
 // ============================================
 // System & Framework Headers
@@ -217,11 +218,24 @@ void renderSettingsOverlay()
   lv_obj_add_event_cb(btn_theme_settings, [](lv_event_t *e)
                       { renderMenu(MENU_THEME_SETTINGS); }, LV_EVENT_CLICKED, NULL);
 
-  // Touch Calibration button (Row 4, Col 1)
+  // Counters Settings button (Row 4, Col 1) - NEW
+  lv_obj_t *btn_counters = lv_btn_create(settings_menu);
+  lv_obj_set_size(btn_counters, 140, 50);
+  lv_obj_set_style_bg_color(btn_counters, getThemeButtonColor(), LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_counters, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 4, 1);
+  lv_obj_t *lbl_counters = lv_label_create(btn_counters);
+  lv_label_set_text(lbl_counters, "Counters");
+  lv_obj_set_style_text_font(lbl_counters, &lv_font_montserrat_20, 0);
+  lv_obj_set_style_text_color(lbl_counters, getThemeTextColor(), 0);  // Theme text color
+  lv_obj_center(lbl_counters);
+  lv_obj_add_event_cb(btn_counters, [](lv_event_t *e)
+                      { render_counters_settings(); }, LV_EVENT_CLICKED, NULL);
+
+  // Touch Calibration button (Row 5, Col 1) - MOVED from Row 4
   lv_obj_t *btn_touch_cal = lv_btn_create(settings_menu);
   lv_obj_set_size(btn_touch_cal, 120, 50);
   lv_obj_set_style_bg_color(btn_touch_cal, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 4, 1);
+  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 5, 1);
   lv_obj_t *lbl_touch_cal = lv_label_create(btn_touch_cal);
   lv_label_set_text(lbl_touch_cal, "Touch Cal");
   lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_20, 0);
@@ -242,36 +256,6 @@ void renderSettingsOverlay()
   lv_obj_center(lbl_life);
   lv_obj_add_event_cb(btn_life, btn_life_event_cb, LV_EVENT_CLICKED, NULL);
 
-  // AMP Button (Row 5, Col 1)
-  int amp_mode = player_store.getInt(KEY_AMP_MODE, PLAYER_SINGLE);
-  bool amp_enabled = (amp_mode == PLAYER_MODE_TWO_PLAYER);
-  lv_obj_t *btn_amp = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_amp, 120, 50);
-  lv_obj_set_style_bg_color(btn_amp, (amp_enabled ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_amp, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 5, 1);
-  lv_obj_t *lbl_amp = lv_label_create(btn_amp);
-  lv_label_set_text(lbl_amp, amp_enabled ? "AMP: ON" : "AMP: OFF");
-  lv_obj_set_style_text_font(lbl_amp, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_amp, (amp_enabled ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when ON, white when OFF
-  lv_obj_center(lbl_amp);
-  lv_obj_add_event_cb(btn_amp, [](lv_event_t *e)
-                      {
-                        int amp_mode = player_store.getInt(KEY_AMP_MODE, PLAYER_SINGLE);
-                        amp_mode = (amp_mode == PLAYER_SINGLE) ? PLAYER_MODE_TWO_PLAYER : PLAYER_SINGLE;
-                        player_store.putInt(KEY_AMP_MODE, amp_mode);
-                        printf("[Settings] AMP mode toggled to: %d\n", amp_mode);
-                        
-                        // Toggle AMP button visibility in life counter
-                        toggle_amp_visibility();
-                        
-                        // Update button text and color directly (no re-render)
-    lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
-    lv_obj_t *label = lv_obj_get_child(btn, 0);
-                        bool amp_enabled = (amp_mode == PLAYER_MODE_TWO_PLAYER);
-                        lv_label_set_text(label, amp_enabled ? "AMP: ON" : "AMP: OFF");
-                        lv_obj_set_style_bg_color(btn, (amp_enabled ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
-                        lv_obj_set_style_text_color(label, (amp_enabled ? getThemeTextColor() : lv_color_white()), 0);
-                      }, LV_EVENT_CLICKED, NULL);
 
   // Swipe to Close Button (Row 6, Col 0)
   bool swipe_enabled_btn = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);

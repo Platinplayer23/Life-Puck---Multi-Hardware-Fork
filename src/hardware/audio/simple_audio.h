@@ -8,7 +8,7 @@
 
 // Audio settings
 #define AUDIO_VOLUME_MAX 21
-#define AUDIO_VOLUME_DEFAULT 10
+// Note: AUDIO_VOLUME_DEFAULT is defined in config.h
 
 // Sound types
 typedef enum {

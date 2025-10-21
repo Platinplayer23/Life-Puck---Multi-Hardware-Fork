@@ -223,7 +223,7 @@ void renderPowerSettingsMenu()
     lv_obj_t *btn = (lv_obj_t*)lv_event_get_target(e);
     
     // Toggle on/off
-    bool current = player_store.getInt(KEY_BATTERY_SAVER, 1) != 0;
+    bool current = player_store.getInt(KEY_BATTERY_SAVER, LOW_BATTERY_DIM_DEFAULT) != 0;
     player_store.putInt(KEY_BATTERY_SAVER, current ? 0 : 1);
     
     updateBatterySaverButton(btn);

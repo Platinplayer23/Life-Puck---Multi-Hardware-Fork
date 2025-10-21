@@ -2,6 +2,7 @@
 // Own Header (first!)
 // ============================================
 #include "life_counter.h"
+#include "simple_counters.h"
 
 // ============================================
 // System & Framework Headers
@@ -45,10 +46,6 @@
 lv_obj_t *life_counter_container = nullptr;
 static lv_obj_t *theme_background = nullptr;  // Theme background image
 static const Theme* last_loaded_theme = nullptr;  // Track last loaded theme for change detection
-lv_obj_t *amp_button = nullptr;
-static lv_obj_t *lbl_amp_label = nullptr;
-static int amp_value = 0;
-static int peak_amp = 8;
 static lv_obj_t *life_arc = nullptr;
 static lv_obj_t *life_label = nullptr;
 static lv_obj_t *grouped_change_label = nullptr;
@@ -65,8 +62,7 @@ void increment_life(int value);
 void decrement_life(int value);
 void reset_life();
 void queue_life_change(int player, int value);
-void increment_amp();
-void clear_amp();
+
 
 // *** PERSISTENT LIFE STORAGE ***
 void saveLifeToNVS(int life_value, int player);
@@ -107,11 +103,7 @@ void init_life_counter()
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   event_grouper.resetHistory(max_life);
   
-  // Reset AMP to OFF on every init to avoid positioning issues
-  player_store.putInt(KEY_AMP_MODE, PLAYER_SINGLE);
-  
-  int amp_mode = PLAYER_SINGLE;
-  bool amp_enabled = false;
+ 
 
   if (!life_counter_container)
   {
@@ -186,6 +178,7 @@ void init_life_counter()
     lv_obj_add_flag(life_arc, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_size(life_arc, SCREEN_DIAMETER, SCREEN_DIAMETER);
     lv_obj_align(life_arc, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_flag(life_arc, LV_OBJ_FLAG_IGNORE_LAYOUT);
     lv_arc_set_bg_angles(life_arc, 0, 360);
     lv_arc_set_angles(life_arc, 270, 270);
     lv_obj_set_style_arc_color(life_arc, GREEN_COLOR, LV_PART_INDICATOR);
@@ -221,33 +214,6 @@ void init_life_counter()
     lv_obj_set_grid_cell(grouped_change_label, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_END, 0, 1);
   }
   
-  if (!amp_button)
-  {
-    amp_button = lv_btn_create(life_counter_container);
-    lv_obj_set_size(amp_button, 80, 80);
-    lv_obj_set_style_radius(amp_button, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(amp_button, AMP_START_COLOR, 0);
-    static bool amp_long_press = false;
-    lv_obj_add_event_cb(amp_button, [](lv_event_t *e)
-                        { amp_long_press = false; }, LV_EVENT_PRESSED, NULL);
-    lv_obj_add_event_cb(amp_button, [](lv_event_t *e)
-                        {
-        amp_long_press = true;
-        clear_amp(); }, LV_EVENT_LONG_PRESSED, NULL);
-    lv_obj_add_event_cb(amp_button, [](lv_event_t *e)
-                        {
-        if (!amp_long_press) increment_amp(); }, LV_EVENT_CLICKED, NULL);
-    lbl_amp_label = lv_label_create(amp_button);
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%d", amp_value);
-    lv_label_set_text(lbl_amp_label, buf);
-    lv_obj_set_style_text_color(lbl_amp_label, WHITE_COLOR, 0);
-    lv_obj_set_style_text_font(lbl_amp_label, &lv_font_montserrat_36, 0);
-    lv_obj_center(lbl_amp_label);
-    lv_obj_align_to(amp_button, life_label, LV_ALIGN_RIGHT_MID, 140, 0);
-    // AMP is always OFF on init, so hide the button
-    lv_obj_add_flag(amp_button, LV_OBJ_FLAG_HIDDEN);
-  }
   
   if (life_arc)
   {
@@ -281,6 +247,8 @@ void init_life_counter()
     render_timer(life_counter_container);
     lv_obj_set_grid_cell(timer_container, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 2, 1);
   }
+  
+  SimpleCounters::init();
 }
 
 void increment_life(step_size_t step_size)
@@ -305,6 +273,9 @@ void reset_life()
   
   // *** AUTO-SAVE: Clear saved data when user resets ***
   clearSavedLife();
+  
+  // *** RESET COUNTERS: Reset all enabled counters to 0 ***
+  SimpleCounters::reset_all_counters();
 }
 
 /**
@@ -386,10 +357,10 @@ void refresh_life_counter_theme()
 
 void teardown_life_counter()
 {
+  SimpleCounters::shutdown();
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   clear_gesture_callbacks();
   teardown_timer();
-  clear_amp();
   event_grouper.resetHistory(max_life);
   
   if (life_counter_container)
@@ -401,8 +372,6 @@ void teardown_life_counter()
   life_arc = nullptr;
   life_label = nullptr;
   grouped_change_label = nullptr;
-  amp_button = nullptr;
-  lbl_amp_label = nullptr;
   theme_background = nullptr;  // Theme background cleanup
   last_loaded_theme = nullptr;  // Reset theme tracking
 }
@@ -684,57 +653,3 @@ void clearSavedLife() {
     printf("[LifePersist] Cleared all saved life data\n");
 }
 
-void increment_amp()
-{
-  amp_value += 1;
-  char buf[8];
-  snprintf(buf, sizeof(buf), "+%d", amp_value);
-  if (amp_button && lbl_amp_label)
-  {
-    lv_label_set_text(lbl_amp_label, buf);
-    uint8_t t = (uint8_t)(((amp_value > peak_amp ? peak_amp : amp_value) * 255) / peak_amp);
-    if (t > 255)
-      t = 255;
-    lv_color_t amp_color = interpolate_color(AMP_START_COLOR, AMP_END_COLOR, t);
-    lv_obj_set_style_bg_color(amp_button, amp_color, 0);
-  }
-}
-
-void clear_amp()
-{
-  amp_value = 0;
-  char buf[8];
-  snprintf(buf, sizeof(buf), "%d", amp_value);
-  if (amp_button && lbl_amp_label)
-  {
-    lv_label_set_text(lbl_amp_label, buf);
-    lv_obj_set_style_bg_color(amp_button, AMP_START_COLOR, 0);
-  }
-}
-
-void toggle_amp_visibility()
-{
-  if (!amp_button || !life_label)
-  {
-    printf("[AMP] Cannot toggle visibility: amp_button=%p, life_label=%p\n", amp_button, life_label);
-    return;
-  }
-  
-  int amp_mode = player_store.getInt(KEY_AMP_MODE, PLAYER_SINGLE);
-  bool amp_enabled = (amp_mode == PLAYER_MODE_TWO_PLAYER);
-  
-  printf("[AMP] Toggling AMP visibility: enabled=%d\n", amp_enabled);
-  
-  if (amp_enabled)
-  {
-    // Show AMP button with fade-in animation
-    lv_obj_clear_flag(amp_button, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_set_style_opa(amp_button, LV_OPA_TRANSP, 0);
-    fade_in_obj(amp_button, 500, 0, NULL);
-  }
-  else
-  {
-    // Hide AMP button
-    lv_obj_add_flag(amp_button, LV_OBJ_FLAG_HIDDEN);
-  }
-}

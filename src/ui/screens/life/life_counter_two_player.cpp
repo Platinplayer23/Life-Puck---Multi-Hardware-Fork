@@ -21,6 +21,7 @@
 // ============================================
 #include "ui/screens/menu/menu.h"
 #include "ui/screens/tools/timer.h"
+#include "ui/screens/life/simple_counters.h"
 
 // ============================================
 // UI Helpers
@@ -104,6 +105,10 @@ void init_life_counter_2P()
   
   is_initializing_2p = true;  // Set flag to indicate initialization is active
   teardown_life_counter_2P(); // Clean up any previous state
+  
+  // *** INITIALIZE COUNTERS EARLY for 2P mode ***
+  SimpleCounters::init();
+  SimpleCounters::create_all_enabled_ui();
   
   // Use default max life for initial UI setup - will be updated later
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
@@ -422,6 +427,9 @@ void refresh_life_counter_2p_theme()
 
 void teardown_life_counter_2P()
 {
+  // *** SHUTDOWN COUNTERS for 2P mode ***
+  SimpleCounters::shutdown();
+  
   int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   event_grouper_p1.resetHistory(max_life);
   event_grouper_p2.resetHistory(max_life);

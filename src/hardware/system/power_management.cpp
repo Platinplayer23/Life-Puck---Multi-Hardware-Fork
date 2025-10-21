@@ -39,7 +39,7 @@ void power_management_init()
   display_is_dimmed = false;
   boot_time = millis(); // Track boot time
   
-  original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50); // Load user's brightness (0-100)
+  original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT); // Load user's brightness (0-100)
 }
 
 void power_reset_inactivity_timer()
@@ -54,7 +54,7 @@ void power_reset_inactivity_timer()
   
   // Restore brightness if dimmed (but not if low battery dimmed)
   if (display_is_dimmed && !display_is_low_battery_dimmed) {
-    original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50); // 0-100
+    original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT); // 0-100
     Set_Backlight(original_brightness);
     display_is_dimmed = false;
     last_wake_time = millis(); // Mark wake time to ignore touches briefly
@@ -108,7 +108,7 @@ void power_check_inactivity()
       
       // If we were dimmed due to low battery, restore brightness immediately
       if (display_is_low_battery_dimmed) {
-        original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50);
+        original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT);
         Set_Backlight(original_brightness);
         display_is_low_battery_dimmed = false;
       }
@@ -155,7 +155,7 @@ void power_check_inactivity()
       
       // Force dim at low battery (≤15%)
       if (battery_percent <= 15 && !display_is_low_battery_dimmed) {
-        original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50);
+        original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT);
         int dimmed_brightness = 5; // Force to 5% at critical battery
         Set_Backlight(dimmed_brightness);
         display_is_low_battery_dimmed = true;
@@ -165,7 +165,7 @@ void power_check_inactivity()
       
       // Restore brightness immediately if battery is back above 15%
       if (battery_percent > 15 && display_is_low_battery_dimmed) {
-        original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50);
+        original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT);
         Set_Backlight(original_brightness);
         display_is_low_battery_dimmed = false;
         return;
@@ -181,7 +181,7 @@ void power_check_inactivity()
   // Check for auto-dim (if enabled)
   if (auto_dim_time > 0 && inactive_time >= auto_dim_time && !display_is_dimmed) {
     // Dim to 25% of current brightness (minimum 5%)
-    original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50); // 0-100
+    original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT); // 0-100
     int dimmed_brightness = original_brightness / 4; // 25% of current
     if (dimmed_brightness < 5) dimmed_brightness = 5; // Minimum 5%
     Set_Backlight(dimmed_brightness);
@@ -216,7 +216,7 @@ void power_wake_display()
   if (!display_is_sleeping) return;
   
   // Restore original brightness
-  original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50); // 0-100
+  original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT); // 0-100
   Set_Backlight(original_brightness);
   display_is_sleeping = false;
   display_is_dimmed = false;
@@ -242,7 +242,7 @@ void power_suspend(bool suspend)
     }
     if (display_is_dimmed && !display_is_low_battery_dimmed) {
       // Restore from auto-dim (but keep low battery dim if active)
-      original_brightness = player_store.getInt(KEY_BRIGHTNESS, 50);
+      original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT);
       Set_Backlight(original_brightness);
       display_is_dimmed = false;
     }

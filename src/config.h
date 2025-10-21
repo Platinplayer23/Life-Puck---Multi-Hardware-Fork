@@ -240,6 +240,51 @@
 
 
 // ============================================================================
+// 🔢 SIMPLE COUNTERS CONFIGURATION
+// ============================================================================
+// Simple counter system settings for both 1P and 2P modes
+// Used by: src/ui/screens/life/simple_counters.cpp
+// ============================================================================
+
+// Counter System Settings
+#define SIMPLE_COUNTER_COUNT 4            // Number of available counter slots (fixed at 4)
+
+// Counter Visual Appearance
+#define COUNTER_SIZE 50                   // Base size of counter circles in pixels
+#define COUNTER_OPACITY 80                // Counter background opacity (0-100, 80=80%)
+#define COUNTER_BORDER_OPACITY 60         // Counter border opacity (0-100, 60=60%)
+#define COUNTER_GRADIENT_DARKEN 30        // How much to darken gradient color (0-100)
+
+// Counter Positioning (4 corners)
+// IMPORTANT: These values are OFFSETS from screen edges, not center coordinates!
+// - Higher values = further from edges (more towards center)
+// - Lower values = closer to edges
+// - All values are in pixels from the respective screen edge
+// - Screen size is 360x360px, so max safe values are around 300px
+#define COUNTER_1_X 50                    // Top-Left: 50px from left edge, 50px from top edge
+#define COUNTER_1_Y 50                    // Top-Left: 50px from left edge, 50px from top edge
+#define COUNTER_2_X 50                    // Top-Right: 50px from right edge, 50px from top edge
+#define COUNTER_2_Y 50                    // Top-Right: 50px from right edge, 50px from top edge
+#define COUNTER_3_X 50                    // Bottom-Left: 50px from left edge, 50px from bottom edge
+#define COUNTER_3_Y 50                    // Bottom-Left: 50px from left edge, 50px from bottom edge
+#define COUNTER_4_X 50                    // Bottom-Right: 50px from right edge, 50px from bottom edge
+#define COUNTER_4_Y 50                    // Bottom-Right: 50px from right edge, 50px from bottom edge
+
+// Counter Interaction Timing (milliseconds)
+#define COUNTER_TAP_THRESHOLD 500         // Short tap duration for increment
+#define COUNTER_LONG_PRESS_THRESHOLD 1500 // Long press duration for reset
+
+// Counter Visual Feedback Colors (hex RGB)
+#define COUNTER_NORMAL_COLOR 0x555555     // Default counter background color
+#define COUNTER_DECREMENT_COLOR 0xFFFF00  // Yellow color during decrement press
+#define COUNTER_RESET_COLOR 0xFF0000      // Red color during reset press
+
+// Counter NVS Storage Keys
+#define NVS_KEY_COUNTER_ENABLED "cnt_en_%d"  // NVS key for counter enabled state
+#define NVS_KEY_COUNTER_VALUE "cnt_val_%d"   // NVS key for counter value
+
+
+// ============================================================================
 // 🎨 UI TIMING & BEHAVIOR
 // ============================================================================
 // Animation speeds, gesture detection, interaction timing

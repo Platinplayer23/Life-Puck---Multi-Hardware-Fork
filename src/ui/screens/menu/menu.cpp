@@ -27,6 +27,7 @@
 // ============================================
 #include "ui/screens/life/life_counter.h"
 #include "ui/screens/life/life_counter_two_player.h"
+#include "ui/screens/life/simple_counters.h"
 #include "ui/screens/settings/settings_overlay.h"
 #include "ui/screens/settings/brightness.h"
 #include "ui/screens/settings/touch_calibration.h"
@@ -34,6 +35,7 @@
 #include "ui/screens/settings/timer_settings.h"
 #include "ui/screens/settings/power_settings.h"
 #include "ui/screens/settings/theme_settings.h"
+#include "ui/screens/settings/counters_settings.h"
 #include "ui/screens/tools/timer.h"
 #include "ui/screens/tools/dice_coin.h"
 #include "ui/screens/menu/preset_editor.h"
@@ -60,6 +62,8 @@
 // Audio and config for animations
 #include "hardware/audio/simple_audio.h"
 #include "config.h"
+// Counter system
+#include "ui/screens/life/simple_counters.h"
 
 lv_obj_t *contextual_menu = nullptr;
 lv_obj_t *settings_menu = nullptr;
@@ -163,7 +167,6 @@ void resetActiveCounter()
   if (player_mode == PLAYER_MODE_ONE_PLAYER)
   {
     reset_life();
-    clear_amp();
   }
   else if (player_mode == PLAYER_MODE_TWO_PLAYER)
   {
@@ -910,6 +913,13 @@ void hideLifeScreen()
     lv_obj_add_flag(life_counter_container, LV_OBJ_FLAG_HIDDEN);
   if (life_counter_container_2p)
     lv_obj_add_flag(life_counter_container_2p, LV_OBJ_FLAG_HIDDEN);
+  
+  // Hide all counter UI during menu animations
+  for (int i = 0; i < 4; i++) {
+    if (SimpleCounters::counters[i].container != nullptr) {
+      lv_obj_add_flag(SimpleCounters::counters[i].container, LV_OBJ_FLAG_HIDDEN);
+    }
+  }
 }
 
 void showLifeScreen()
@@ -919,12 +929,21 @@ void showLifeScreen()
     lv_obj_clear_flag(life_counter_container, LV_OBJ_FLAG_HIDDEN);
     // Refresh theme if changed while in settings
     refresh_life_counter_theme();
+    // Create counter UI for enabled counters
+    SimpleCounters::create_all_enabled_ui();
   }
   if (life_counter_container_2p)
   {
     lv_obj_clear_flag(life_counter_container_2p, LV_OBJ_FLAG_HIDDEN);
     // Refresh theme if changed while in settings
     refresh_life_counter_2p_theme();
+  }
+  
+  // Show all enabled counter UI when returning to life screen
+  for (int i = 0; i < 4; i++) {
+    if (SimpleCounters::counters[i].container != nullptr && SimpleCounters::counters[i].enabled) {
+      lv_obj_clear_flag(SimpleCounters::counters[i].container, LV_OBJ_FLAG_HIDDEN);
+    }
   }
 }
 
@@ -944,6 +963,7 @@ void teardownAllMenus()
   teardownTimerSettingsMenu();
   teardownPowerSettingsMenu();
   teardownThemeSettingsMenu();
+  teardown_counters_settings();
 }
 
 void teardownContextualMenuOverlay()
