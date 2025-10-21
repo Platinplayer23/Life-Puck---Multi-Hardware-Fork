@@ -106,16 +106,7 @@ void init_life_counter_2P()
   is_initializing_2p = true;  // Set flag to indicate initialization is active
   teardown_life_counter_2P(); // Clean up any previous state
   
-  // *** INITIALIZE COUNTERS EARLY for 2P mode ***
-  SimpleCounters::init();
-  SimpleCounters::create_all_enabled_ui();
-  
-  // Use default max life for initial UI setup - will be updated later
-  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  event_grouper_p1.resetHistory(max_life);
-  event_grouper_p2.resetHistory(max_life);
-  
-  // *** LOAD SAVED LIFE VALUES for animation targets ***
+  // *** LOAD SAVED LIFE VALUES FIRST - no temporary max life display ***
   target_life_p1 = loadLifeFromNVS(1);  // Player 1
   target_life_p2 = loadLifeFromNVS(2);  // Player 2
   event_grouper_p1.resetHistory(target_life_p1);
@@ -139,6 +130,10 @@ void init_life_counter_2P()
     lv_obj_set_grid_dsc_array(life_counter_container_2p, col_dsc, row_dsc);
     lv_obj_set_layout(life_counter_container_2p, LV_LAYOUT_GRID);
   }
+  
+  // *** INITIALIZE COUNTERS AFTER CONTAINER IS CREATED for 2P mode ***
+  SimpleCounters::init();
+  SimpleCounters::create_all_enabled_ui();
   
   // *** THEME BACKGROUND INTEGRATION WITH LIVE UPDATE ***
   // Get current theme and check if it changed
@@ -181,6 +176,9 @@ void init_life_counter_2P()
       lv_obj_move_background(theme_background_2p);
       
       printf("[LifeCounter2P] New theme background loaded with opacity %d\n", current_theme->background_opacity);
+      
+      // Recreate counters after theme loading to ensure they're on top
+      SimpleCounters::create_all_enabled_ui();
     }
     else
     {
@@ -405,6 +403,9 @@ void refresh_life_counter_2p_theme()
       lv_obj_move_background(theme_background_2p);
       
       printf("[LifeCounter2P] New background loaded (opacity: %d)\n", current_theme->background_opacity);
+      
+      // Recreate counters after theme loading to ensure they're on top
+      SimpleCounters::create_all_enabled_ui();
     }
     else
     {
@@ -430,9 +431,8 @@ void teardown_life_counter_2P()
   // *** SHUTDOWN COUNTERS for 2P mode ***
   SimpleCounters::shutdown();
   
-  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  event_grouper_p1.resetHistory(max_life);
-  event_grouper_p2.resetHistory(max_life);
+  // *** KEEP CURRENT LIFE: Don't reset history to max life during teardown ***
+  // The event_groupers maintain their current state for seamless UI transitions
   teardown_timer();
   clear_gesture_callbacks();
   
@@ -466,14 +466,21 @@ void resetLastLoadedTheme2P() {
 // Reset life total for Player 1
 void reset_life_2p()
 {
-  int life_value = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  event_grouper_p1.resetHistory(life_value);
-  update_life_label(1, life_value);
-  event_grouper_p2.resetHistory(life_value);
-  update_life_label(2, life_value);
+  // Use start life (KEY_LIFE_MAX) for reset - this is the correct value
+  int start_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   
-  // *** AUTO-SAVE: Clear saved data when user resets (Two-Player) ***
+  // *** MARK CURRENT LIFE AS INVALID FIRST: Prevents auto-save during reset ***
   clearSavedLife();
+  
+  event_grouper_p1.resetHistory(start_life);
+  update_life_label(1, start_life);
+  event_grouper_p2.resetHistory(start_life);
+  update_life_label(2, start_life);
+  
+  // *** SAVE NEW LIFE: Immediately save the reset values and mark as valid ***
+  // This ensures persistence works correctly after reset
+  saveLifeToNVS(start_life, 1);  // Player 1
+  saveLifeToNVS(start_life, 2);  // Player 2
 }
 
 // *** SMOOTH ARC ANIMATION CALLBACK (Player 1) ***
@@ -637,6 +644,12 @@ void update_life_label(int player, int new_life_total)
     char buf[8];
     snprintf(buf, sizeof(buf), "%d", new_life_total);
     lv_label_set_text(life_label, buf);
+    
+    // Dynamische Schriftgrößen-Anpassung basierend auf Zahlenlänge
+    if (new_life_total > 999)
+      lv_obj_set_style_text_font(life_label, &lv_font_montserrat_48, 0);
+    else
+      lv_obj_set_style_text_font(life_label, &lv_font_montserrat_72, 0);
   }
 
   if (life_arc != nullptr)

@@ -176,13 +176,15 @@ static void handle_save()
   player_store.putInt(KEY_LIFE_STEP_SMALL, small_step);
   player_store.putInt(KEY_LIFE_STEP_LARGE, large_step);
   
-  // Reset life counter if max_life was changed
+  // *** RESET EVERYTHING if max_life changed ***
+  // resetActiveCounter() already resets life, counters, timer, and marks saved life as invalid
   if (max_life_changed)
   {
     resetActiveCounter();
-    printf("[Start Life] Max life changed from %d to %d, resetting life counter\n", old_max_life, max_life);
+    printf("[Start Life] Max life changed from %d to %d, resetting everything\n", old_max_life, max_life);
   }
   
+  // Refresh UI (resetActiveCounter already calls init if needed, but we need to refresh display)
   int player_mode = player_store.getInt(KEY_PLAYER_MODE, PLAYER_SINGLE);
   if (player_mode == PLAYER_MODE_ONE_PLAYER)
   {

@@ -26,7 +26,11 @@ StateStore::~StateStore() {}
 
 void StateStore::putInt(const char *key, u_int64_t value)
 {
-  nvs.setInt(key, value);
+  bool success = nvs.setInt(key, value);
+  if (!success) {
+    printf("[NVS ERROR] Failed to write key '%s' with value %llu\n", key, value);
+  }
+  // ArduinoNvs automatically commits after setInt()
 }
 
 u_int64_t StateStore::getInt(const char *key, u_int64_t defaultValue)
@@ -36,7 +40,11 @@ u_int64_t StateStore::getInt(const char *key, u_int64_t defaultValue)
 
 void StateStore::putString(const char *key, const char *value)
 {
-  nvs.setString(key, value);
+  bool success = nvs.setString(key, value);
+  if (!success) {
+    printf("[NVS ERROR] Failed to write string key '%s'\n", key);
+  }
+  // ArduinoNvs automatically commits after setString()
 }
 
 String StateStore::getString(const char *key, const char *defaultValue)

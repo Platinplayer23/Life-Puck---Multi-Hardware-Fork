@@ -153,10 +153,11 @@ static void togglePlayerMode()
   PlayerMode new_mode = (current_mode == PLAYER_MODE_ONE_PLAYER) ? PLAYER_MODE_TWO_PLAYER : PLAYER_MODE_ONE_PLAYER;
   player_store.putInt(KEY_PLAYER_MODE, (int)new_mode);
   
-  // Reset life points when switching player modes - use existing reset function
+  // *** RESET EVERYTHING: Use centralized reset function ***
+  // resetActiveCounter() resets life, counters, timer, and marks saved life as invalid
   resetActiveCounter();
   
-  printf("[togglePlayerMode] Player mode toggled to %d, life points reset\n", new_mode);
+  printf("[togglePlayerMode] Player mode toggled to %d, everything reset\n", new_mode);
   ui_init();
   renderMenu(MENU_NONE);
 }
@@ -602,6 +603,10 @@ void renderPresetListMenu() {
       
       // Save active preset index for theme system
       player_store.putInt("preset_idx", idx);
+      
+      // *** RESET EVERYTHING: Use centralized reset function ***
+      // This resets life, counters, timer, and marks saved life as invalid
+      resetActiveCounter();
       
       // If Automatic mode is active, reset theme trackers to force refresh
       int theme_mode = player_store.getInt(KEY_THEME_MODE, THEME_MODE_OFF);

@@ -141,40 +141,40 @@
 #define PRESET_4_STARTING_LIFE 40
 #define PRESET_4_SMALL_STEP 1
 #define PRESET_4_LARGE_STEP 5
-#define PRESET_4_THEME 1                 // Yugioh
+#define PRESET_4_THEME 4                 // Yugioh
 
 // PRESET 5: Lorcana
 #define PRESET_5_NAME "Lorcana"
 #define PRESET_5_STARTING_LIFE 20
 #define PRESET_5_SMALL_STEP 1
 #define PRESET_5_LARGE_STEP 5
-#define PRESET_5_THEME 1                 // Yugioh
+#define PRESET_5_THEME 4                 // Yugioh
 
 // PRESET 6: One Piece TCG
 #define PRESET_6_NAME "One Piece TCG"
 #define PRESET_6_STARTING_LIFE 5
 #define PRESET_6_SMALL_STEP 1
 #define PRESET_6_LARGE_STEP 2
-#define PRESET_6_THEME 1                 // Yugioh
+#define PRESET_6_THEME 4                 // Yugioh
 
 // PRESET 7-9: Custom Presets
 #define PRESET_7_NAME "Custom 8"
 #define PRESET_7_STARTING_LIFE 20
 #define PRESET_7_SMALL_STEP 1
 #define PRESET_7_LARGE_STEP 5
-#define PRESET_7_THEME 1
+#define PRESET_7_THEME 4
 
 #define PRESET_8_NAME "Custom 9"
 #define PRESET_8_STARTING_LIFE 20
 #define PRESET_8_SMALL_STEP 1
 #define PRESET_8_LARGE_STEP 5
-#define PRESET_8_THEME 1
+#define PRESET_8_THEME 4
 
 #define PRESET_9_NAME "Custom 10"
 #define PRESET_9_STARTING_LIFE 20
 #define PRESET_9_SMALL_STEP 1
 #define PRESET_9_LARGE_STEP 5
-#define PRESET_9_THEME 1
+#define PRESET_9_THEME 4
 
 
 // ============================================================================
@@ -186,7 +186,7 @@
 // ============================================================================
 
 #define TOUCH_CAL_DEFAULT_OFFSET_X 0.0f
-#define TOUCH_CAL_DEFAULT_SCALE_X 0.85f
+#define TOUCH_CAL_DEFAULT_SCALE_X 0.95f
 #define TOUCH_CAL_DEFAULT_SHEAR_XY 0.0f
 #define TOUCH_CAL_DEFAULT_OFFSET_Y 0.0f
 #define TOUCH_CAL_DEFAULT_SHEAR_YX 0.0f
@@ -248,11 +248,12 @@
 
 // Counter System Settings
 #define SIMPLE_COUNTER_COUNT 4            // Number of available counter slots (fixed at 4)
+#define COUNTER_MAX_VALUE 999             // Maximum counter value (prevents overflow)
 
 // Counter Visual Appearance
 #define COUNTER_SIZE 50                   // Base size of counter circles in pixels
-#define COUNTER_OPACITY 80                // Counter background opacity (0-100, 80=80%)
-#define COUNTER_BORDER_OPACITY 60         // Counter border opacity (0-100, 60=60%)
+#define COUNTER_OPACITY 180               // Counter background opacity (180 = 70% opaque)
+#define COUNTER_BORDER_OPACITY 153        // Counter border opacity (153 = 60% opacity)
 #define COUNTER_GRADIENT_DARKEN 30        // How much to darken gradient color (0-100)
 
 // Counter Positioning (4 corners)

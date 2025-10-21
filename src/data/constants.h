@@ -90,9 +90,14 @@ enum ContextualQuadrant
 #define KEY_PRESET_9_THEME "preset_9_theme"  // Custom 10 theme
 
 // *** PERSISTENT LIFE VALUES ***
-#define KEY_SAVED_LIFE_P1 "saved_life_p1"    // Single player or Player 1 life
-#define KEY_SAVED_LIFE_P2 "saved_life_p2"    // Player 2 life (two-player mode)
-#define KEY_LIFE_SAVE_VALID "life_save_valid" // Flag: 1 if saved values are valid
+#define KEY_SAVED_LIFE_P1 "saved_life_p1"    // Single player or Player 1 life (legacy)
+#define KEY_SAVED_LIFE_P2 "saved_life_p2"    // Player 2 life (two-player mode) (legacy)
+#define KEY_LIFE_SAVE_VALID "life_save_valid" // Flag: 1 if saved values are valid (legacy)
+
+// *** NEW IMPROVED LIFE SYSTEM ***
+#define KEY_CURRENT_LIFE_P1 "cur_life_p1" // Player 1 current life (max 15 chars for NVS)
+#define KEY_CURRENT_LIFE_P2 "cur_life_p2" // Player 2 current life  
+#define KEY_CURRENT_LIFE_VALID "cur_life_valid" // Flag: 1 if current life is valid
 
 // define for life increment levels small and large
 #define DEFAULT_LIFE_INCREMENT_SMALL 1

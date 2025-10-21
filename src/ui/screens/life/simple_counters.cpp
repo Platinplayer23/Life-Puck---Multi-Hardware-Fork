@@ -72,6 +72,11 @@ void SimpleCounters::increment(int slot) {
     
     counters[slot].value++;
     
+    // Cap at maximum value to prevent overflow
+    if (counters[slot].value > COUNTER_MAX_VALUE) {
+        counters[slot].value = COUNTER_MAX_VALUE;
+    }
+    
     if (counters[slot].label != nullptr) {
         update_display(slot);
     }
@@ -142,7 +147,16 @@ void SimpleCounters::create_counter_ui(int slot) {
     if (counters[slot].container != nullptr) return;
     
     // Create container as child of screen - size automatically adjusts to COUNTER_SIZE
-    counters[slot].container = lv_obj_create(lv_scr_act());
+    // Check if we're in 2P mode and use the appropriate container
+    lv_obj_t* parent = lv_scr_act();
+    
+    // Try to find the 2P container if it exists
+    extern lv_obj_t* life_counter_container_2p;
+    if (life_counter_container_2p != nullptr) {
+        parent = life_counter_container_2p;
+    }
+    
+    counters[slot].container = lv_obj_create(parent);
     lv_obj_set_size(counters[slot].container, COUNTER_SIZE + 20, COUNTER_SIZE + 20); // Auto-adjusts to COUNTER_SIZE
     lv_obj_add_flag(counters[slot].container, LV_OBJ_FLAG_IGNORE_LAYOUT);
     
@@ -198,7 +212,14 @@ void SimpleCounters::create_counter_ui(int slot) {
     lv_obj_set_scrollbar_mode(counters[slot].circle, LV_SCROLLBAR_MODE_OFF);
     
     // Use theme colors with configurable transparency and gradient
-    lv_obj_set_style_bg_color(counters[slot].circle, getThemeButtonColor(), 0);
+    lv_color_t theme_color = getThemeButtonColor();
+    
+    // Fallback to bright yellow if theme color is too dark
+    if (lv_color_brightness(theme_color) < 50) {
+        theme_color = lv_color_hex(0xFFFF00); // Bright yellow fallback
+    }
+    
+    lv_obj_set_style_bg_color(counters[slot].circle, theme_color, 0);
     lv_obj_set_style_bg_opa(counters[slot].circle, COUNTER_OPACITY, 0); // Configurable opacity
     
     // Add subtle gradient effect (top to bottom) with configurable darkening
@@ -214,8 +235,12 @@ void SimpleCounters::create_counter_ui(int slot) {
     counters[slot].label = lv_label_create(counters[slot].circle);
     lv_label_set_text_fmt(counters[slot].label, "%d", counters[slot].value);
     lv_obj_set_style_text_font(counters[slot].label, &lv_font_montserrat_32, 0);
-    lv_obj_set_style_text_color(counters[slot].label, getThemeTextColor(), 0);  // Use theme text color
+    lv_obj_set_style_text_color(counters[slot].label, lv_color_white(), 0);  // Always white for maximum visibility
     lv_obj_center(counters[slot].label);
+    
+    // Move counter to foreground to ensure visibility
+    lv_obj_move_foreground(counters[slot].container);
+    lv_obj_move_foreground(counters[slot].circle);
     
     // Add event callbacks on the circle (visible element) - include PRESSING for color changes
     lv_obj_add_event_cb(counters[slot].circle, on_counter_event, LV_EVENT_PRESSED, (void*)(intptr_t)slot);
@@ -315,9 +340,9 @@ static void on_counter_event(lv_event_t* e) {
         uint32_t duration = millis() - SimpleCounters::counters[slot].press_start_time;
         printf("[Counter] Released slot %d, duration: %d\n", slot, duration);
         
-        // Reset text color to theme color
+        // Reset text color to white for maximum visibility
         lv_obj_set_style_text_color(SimpleCounters::counters[slot].label, 
-                                  getThemeTextColor(), 0);
+                                  lv_color_white(), 0);
         
         // Perform action based on duration
         if (duration < COUNTER_TAP_THRESHOLD) {

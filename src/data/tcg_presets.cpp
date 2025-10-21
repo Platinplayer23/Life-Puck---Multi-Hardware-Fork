@@ -170,8 +170,8 @@ void save_preset(int index) {
         current_preset_index = index;
         player_store.putInt("preset_idx", index);
         
-        // Reset life points to preset values
-        resetActiveCounter();
+        // Note: resetActiveCounter() is called by the caller after updating NVS values
+        // Don't call it here to avoid double-reset
         
         printf("[Preset] Applied preset %s with %d starting life\n", TCG_PRESETS[index].name, TCG_PRESETS[index].starting_life);
     }

@@ -99,12 +99,10 @@ void init_life_counter()
   is_initializing = true;
   teardown_life_counter();
   
-  // Use default max life for initial UI setup - will be updated later
-  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  event_grouper.resetHistory(max_life);
+  // *** LOAD SAVED LIFE VALUES FIRST ***
+  int saved_life = loadLifeFromNVS(1);  // Load before any UI setup
+  event_grouper.resetHistory(saved_life);
   
- 
-
   if (!life_counter_container)
   {
     life_counter_container = lv_obj_create(lv_scr_act());
@@ -220,9 +218,7 @@ void init_life_counter()
     lv_obj_clear_flag(life_arc, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_arc_opa(life_arc, LV_OPA_COVER, LV_PART_INDICATOR);
     
-    // *** AUTO-LOAD: Load saved life BEFORE animation to prevent blink ***
-    int saved_life = loadLifeFromNVS(1);  // Single-player = Player 1
-    event_grouper.resetHistory(saved_life);
+    // *** Life already loaded at init_life_counter() start ***
     
     lv_anim_t anim;
     lv_anim_init(&anim);
@@ -267,12 +263,18 @@ void decrement_life(step_size_t step_size)
 
 void reset_life()
 {
-  int life_value = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-  event_grouper.resetHistory(life_value);
-  update_life_label(life_value);
+  // Use start life (KEY_LIFE_MAX) for reset - this is the correct value
+  int start_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   
-  // *** AUTO-SAVE: Clear saved data when user resets ***
+  // *** MARK CURRENT LIFE AS INVALID FIRST: Prevents auto-save during reset ***
   clearSavedLife();
+  
+  event_grouper.resetHistory(start_life);
+  update_life_label(start_life);
+  
+  // *** SAVE NEW LIFE: Immediately save the reset value and mark as valid ***
+  // This ensures persistence works correctly after reset
+  saveLifeToNVS(start_life, PLAYER_SINGLE);
   
   // *** RESET COUNTERS: Reset all enabled counters to 0 ***
   SimpleCounters::reset_all_counters();
@@ -358,10 +360,10 @@ void refresh_life_counter_theme()
 void teardown_life_counter()
 {
   SimpleCounters::shutdown();
-  int max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
+  // *** KEEP CURRENT LIFE: Don't reset history to max life during teardown ***
+  // The event_grouper maintains its current state for seamless UI transitions
   clear_gesture_callbacks();
   teardown_timer();
-  event_grouper.resetHistory(max_life);
   
   if (life_counter_container)
   {
@@ -520,6 +522,12 @@ void update_life_label(int new_life_total)
     char buf[8];
     snprintf(buf, sizeof(buf), "%d", new_life_total);
     lv_label_set_text(life_label, buf);
+    
+    // Dynamische Schriftgrößen-Anpassung basierend auf Zahlenlänge
+    if (new_life_total > 999)
+      lv_obj_set_style_text_font(life_label, &lv_font_montserrat_48, 0);
+    else
+      lv_obj_set_style_text_font(life_label, &lv_font_montserrat_72, 0);
   }
   if (life_arc != nullptr)
   {
@@ -612,44 +620,94 @@ void queue_life_change(int player, int value)
  * @param player Player ID (1 for single/player1, 2 for player2)
  */
 void saveLifeToNVS(int life_value, int player) {
-    const char* key = (player == 2) ? KEY_SAVED_LIFE_P2 : KEY_SAVED_LIFE_P1;
+    const char* key = (player == 2) ? KEY_CURRENT_LIFE_P2 : KEY_CURRENT_LIFE_P1;
     
     player_store.putInt(key, life_value);
-    player_store.putInt(KEY_LIFE_SAVE_VALID, 1);  // Mark as valid
+    player_store.putInt(KEY_CURRENT_LIFE_VALID, 1);  // Mark current life as valid
     
-    printf("[LifePersist] Saved P%d life: %d\n", player, life_value);
+    printf("[LifePersist] Saved P%d current life: %d\n", player, life_value);
 }
 
 /**
- * @brief Load saved life value from NVS
+ * @brief Load saved life value from NVS with intelligent fallback and corruption detection
  * @param player Player ID (1 for single/player1, 2 for player2) 
- * @return Saved life value, or default max life if no valid save exists
+ * @return Saved life value, or start life if no valid save exists
+ * 
+ * Persistence behavior:
+ * - First boot: valid=0 (default), loads start_life and marks as valid for future
+ * - Normal operation: valid=1, loads current_life (persists across reboots)
+ * - After reset/preset/mode change: valid=0 (explicit), loads start_life
+ * 
+ * Fallback triggers ONLY when:
+ * - KEY_CURRENT_LIFE_VALID is 0 (first boot, reset, preset change, mode change)
+ * - Stored value is unreasonably large (>999999 = likely corruption)
+ * - NVS corruption detected (getInt returns default despite valid flag)
  */
 int loadLifeFromNVS(int player) {
-    // Check if we have valid saved data
-    int is_valid = player_store.getInt(KEY_LIFE_SAVE_VALID, 0);
+    // Check if current life is valid
+    int is_valid = player_store.getInt(KEY_CURRENT_LIFE_VALID, -1);  // Use -1 to detect first boot
     
-    if (is_valid != 1) {
-        printf("[LifePersist] No saved data, using default\n");
-        return player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
+    // *** FIRST BOOT DETECTION: If never set before (truly first boot) ***
+    // Note: is_valid == -1 means KEY_CURRENT_LIFE_VALID was never written to NVS
+    // This is DIFFERENT from is_valid == 0 which means explicitly invalidated
+    if (is_valid == -1) {
+        printf("[LifePersist] First boot detected - initializing persistence system\n");
+        // On first boot, always use start_life (don't try to recover old values)
+        int start_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
+        if (start_life >= 999999) {
+            start_life = DEFAULT_LIFE_MAX;
+        }
+        printf("[LifePersist] First boot: Using start_life %d for P%d, initializing persistence\n", start_life, player);
+        saveLifeToNVS(start_life, player);  // Save and mark as valid
+        return start_life;
     }
     
-    const char* key = (player == 2) ? KEY_SAVED_LIFE_P2 : KEY_SAVED_LIFE_P1;
-    int default_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
-    int saved_life = player_store.getInt(key, default_life);
+    if (is_valid == 1) {
+        // Load current life - use INT32_MAX as impossible default to detect corruption
+        const char* key = (player == 2) ? KEY_CURRENT_LIFE_P2 : KEY_CURRENT_LIFE_P1;
+        int current_life = player_store.getInt(key, 999999);  // Use high value to detect NVS read failure
+        
+        // *** CORRUPTION DETECTION: Reject unreasonable values ***
+        // Accept 0 and negative values (user might decrement below 0 or set 0 as start life)
+        // Only reject if value is suspiciously high (likely NVS corruption/read failure)
+        if (current_life < 999999) {
+            printf("[LifePersist] Loaded P%d current life: %d\n", player, current_life);
+            return current_life;
+        }
+        
+        // NVS corruption detected: valid flag is 1, but stored value is corrupted
+        printf("[LifePersist] CRITICAL: P%d current life corrupted (got %d), invalidating and using fallback\n", player, current_life);
+        player_store.putInt(KEY_CURRENT_LIFE_VALID, 0);  // Invalidate to prevent repeated warnings
+    }
     
-    printf("[LifePersist] Loaded P%d life: %d\n", player, saved_life);
-    return saved_life;
+    // Fallback: Use start life (KEY_LIFE_MAX) when:
+    // - KEY_CURRENT_LIFE_VALID is explicitly 0 (user reset/preset/mode change)
+    // - NVS corruption detected and auto-invalidated
+    int start_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
+    
+    // Additional safety: validate start_life is reasonable
+    if (start_life >= 999999) {
+        printf("[LifePersist] CRITICAL: KEY_LIFE_MAX corrupted (%d), using DEFAULT_LIFE_MAX\n", start_life);
+        start_life = DEFAULT_LIFE_MAX;
+    }
+    
+    printf("[LifePersist] Using fallback start_life for P%d: %d (valid=%d)\n", player, start_life, is_valid);
+    return start_life;
 }
 
 /**
  * @brief Clear saved life data (e.g., when user resets game)
+ * IMPORTANT: KEY_LIFE_MAX is NEVER changed - it remains as permanent fallback
  */
 void clearSavedLife() {
+    // Mark current life as invalid (don't delete the values)
+    player_store.putInt(KEY_CURRENT_LIFE_VALID, 0);
+    
+    // Legacy support: also clear old keys
     player_store.putInt(KEY_LIFE_SAVE_VALID, 0);
     player_store.putInt(KEY_SAVED_LIFE_P1, 0);  
     player_store.putInt(KEY_SAVED_LIFE_P2, 0);
     
-    printf("[LifePersist] Cleared all saved life data\n");
+    printf("[LifePersist] Marked current life as invalid, KEY_LIFE_MAX preserved\n");
 }
 
