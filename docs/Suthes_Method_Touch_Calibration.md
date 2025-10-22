@@ -1,59 +1,78 @@
-# Suthe's Method - Interactive Touch Calibration
+# Touch Calibration System - 3-Round Calibration
 
 ## Introduction
 
-Since I couldn't find any similar approach in existing touch calibration implementations, I'm taking the liberty of naming this method after myself: **"Suthe's Method"**.
+This document describes the **3-Round Calibration System** - an advanced touch calibration technique that provides superior accuracy through multiple refinement passes.
 
-This document describes an innovative, zone-based touch calibration technique that provides fully automatic parameter adjustment through intelligent hit-detection zones.
+The system evolved from the original "Suthe's Method" (zone-based calibration) into a more sophisticated approach that ensures optimal touch accuracy through three distinct calibration rounds.
 
 ---
 
-## What is Suthe's Method?
+## What is the 3-Round Calibration System?
 
-**Suthe's Method** is an interactive calibration approach that uses invisible detection zones to automatically adjust calibration parameters based on where the user touches.
+The **3-Round Calibration System** is an advanced calibration approach that uses multiple refinement passes to achieve optimal touch accuracy:
 
 ### Core Concept
 
-Instead of sampling multiple precise points and calculating transformations mathematically, Suthe's Method:
+The system performs calibration in three distinct rounds:
 
+1. **Round 1: Full Calibration** - Complete coarse + fine calibration of all parameters
+2. **Round 2: Refinement** - Fine-tuning of all parameters for improved accuracy  
+3. **Round 3: Final Offset** - Final offset adjustment for perfect alignment
+
+Each round uses the same interactive approach:
 1. **Shows a target** (line or dot)
 2. **User touches the target** (doesn't need to be pixel-perfect)
-3. **System detects deviation** (which zone was hit: left/right, up/down, etc.)
-4. **Parameters auto-adjust** (offset or scale incrementally changed)
-5. **Loop repeats** until touch lands in target zone
-6. **Convergence achieved** → Lock and advance to next step
+3. **System detects deviation** and auto-adjusts parameters
+4. **Loop repeats** until touch lands in target zone
+5. **Convergence achieved** → Lock and advance to next step
 
-This creates a **self-correcting feedback loop** that eliminates the need for precise manual alignment.
+This creates a **multi-pass refinement system** that ensures optimal calibration accuracy.
 
 ---
 
 ## Technical Implementation
 
-### Calibration Steps
+### 3-Round Calibration Process
 
-The method calibrates 4 (or 5) parameters sequentially:
+The system calibrates 5 parameters through three distinct rounds:
 
-1. **Offset X** - Horizontal offset correction
-2. **Offset Y** - Vertical offset correction  
-3. **Rotation** (Optional) - Rotational alignment
-4. **Scale X** - Horizontal scaling correction
-5. **Scale Y** - Vertical scaling correction
+#### Round 1: Full Calibration (Coarse + Fine)
+1. **Offset X** - Horizontal offset correction (Coarse → Fine)
+2. **Offset Y** - Vertical offset correction (Coarse → Fine)
+3. **Rotation** - Rotational alignment (Coarse → Fine)
+4. **Scale X** - Horizontal scaling correction (Coarse → Fine)
+5. **Scale Y** - Vertical scaling correction (Coarse → Fine)
 
-### Two-Pass System
+#### Round 2: Refinement
+- **Refine Offset X** - Fine-tuning horizontal offset
+- **Refine Offset Y** - Fine-tuning vertical offset
+- **Refine Rotation** - Fine-tuning rotation angle
+- **Refine Scale X** - Fine-tuning horizontal scale
+- **Refine Scale Y** - Fine-tuning vertical scale
 
-Each step uses a **2-pass approach** for optimal speed and precision:
+#### Round 3: Final Offset
+- **Final Offset X** - Ultimate horizontal precision
+- **Final Offset Y** - Ultimate vertical precision
 
-#### Pass 1: Coarse Adjustment (Fast)
-- **Large step sizes** (2.0 pixels, 1.5% scale)
-- **Quick approach** to target zone
-- **Locks after 10 consecutive frames** in target
-- **Automatically switches** to fine pass
+### Multi-Pass System
 
-#### Pass 2: Fine Adjustment (Precise)
-- **Small step sizes** (0.25 pixels, 0.1% scale)
-- **High precision** tuning
-- **Locks after 10 consecutive frames** in target
-- **Advances** to next calibration step
+Each step uses different precision levels:
+
+#### Round 1: Coarse + Fine Passes
+- **Coarse Pass**: Large step sizes, quick approach to target
+- **Fine Pass**: Small step sizes, high precision tuning
+- **Automatic switching** from coarse to fine
+
+#### Round 2: Refinement Pass
+- **Ultra-fine step sizes** (50% of fine pass)
+- **Double lock frames** for stability
+- **Enhanced precision** for all parameters
+
+#### Round 3: Final Pass
+- **Maximum precision** offset adjustment
+- **Double lock frames** for final stability
+- **Perfect alignment** achievement
 
 ### Zone-Based Detection
 
@@ -129,21 +148,24 @@ Each calibration step uses **invisible hit-test zones** to detect touch position
 
 ---
 
-## Advantages of Suthe's Method
+## Advantages of the 3-Round Calibration System
 
 ### ✅ User Experience
 - **No pixel-perfect alignment required** - Just touch and hold
 - **Fully automatic** - System adjusts parameters without user input
 - **Visual feedback** - Clear "OK! Release finger" when locked
-- **Fast** - Typically completes in 15-30 seconds
+- **Superior accuracy** - 3-round refinement ensures optimal precision
 - **Intuitive** - No technical knowledge needed
+- **Progressive refinement** - Each round improves accuracy
 
 ### ✅ Technical Benefits
+- **Multi-pass refinement** - 3 rounds ensure optimal calibration
 - **Self-correcting** - Feedback loop ensures convergence
 - **Axis decoupling** - X and Y calibrated independently
 - **No complex math during calibration** - Simple hit-tests only
 - **Robust** - Works even with severely miscalibrated starting values
 - **Real-time** - Parameters update at 20 Hz (50ms timer)
+- **Enhanced precision** - Round 2 and 3 provide ultra-fine adjustments
 
 ### ✅ Implementation Advantages
 - **No multi-point sampling** - No need for 9 precise touch points
@@ -151,6 +173,7 @@ Each calibration step uses **invisible hit-test zones** to detect touch position
 - **Low memory footprint** - No sample buffers or large arrays
 - **Fast execution** - Hit-tests are computationally cheap
 - **LVGL native** - Uses standard `lv_obj_hit_test()` API
+- **Progressive accuracy** - Each round builds upon the previous
 
 ---
 
@@ -299,48 +322,74 @@ During calibration, Suthe's Method adjusts **C, F, A, E** (and optionally **B, D
 
 ## User Workflow
 
-### Step-by-Step Guide
+### 3-Round Calibration Process
 
-#### Step 1: Offset X (Horizontal Centering)
-1. **Red vertical line** appears in center
-2. **User touches and holds** the line
+The calibration consists of **3 rounds** with **13 total steps**:
+
+#### Round 1: Full Calibration (5 steps, each with Coarse + Fine)
+
+**Step 1: Offset X (Horizontal Centering)**
+1. **Red dot** appears in center
+2. **User touches and holds** the dot
 3. **System detects** if touch is left or right of center
-4. **Offset adjusts automatically** until touch hits center
+4. **Offset adjusts automatically** (Coarse → Fine)
 5. **Text changes** to "OK! Release finger"
 6. **User releases** → Advances to next step
 
-#### Step 2: Offset Y (Vertical Centering)
-1. **Red horizontal line** appears in center
-2. **User touches and holds** the line
+**Step 2: Offset Y (Vertical Centering)**
+1. **Red dot** appears in center
+2. **User touches and holds** the dot
 3. **System detects** if touch is above or below center
-4. **Offset adjusts automatically** until touch hits center
+4. **Offset adjusts automatically** (Coarse → Fine)
 5. **Text changes** to "OK! Release finger"
 6. **User releases** → Advances to next step
 
-#### Step 3: Rotation (Optional, if enabled)
+**Step 3: Rotation**
 1. **Red vertical line** appears with **red dot in upper half**
 2. **User touches and holds** the upper half of the line (near the dot)
 3. **System detects** if touch is left/right of line
-4. **Angle adjusts automatically** until touch aligns with line
-5. **Target zone**: Entire upper half of the line (large target for easier alignment)
-6. **Text changes** to "OK! Release finger"
-7. **User releases** → Advances to next step
-
-#### Step 4: Scale X (Horizontal Scaling)
-1. **Red dot** appears on **right edge**
-2. **Scale starts at 0.5** (everything squeezed left)
-3. **User touches and holds** the dot
-4. **Scale increases automatically** until touch hits target
+4. **Angle adjusts automatically** (Coarse → Fine)
 5. **Text changes** to "OK! Release finger"
 6. **User releases** → Advances to next step
 
-#### Step 5: Scale Y (Vertical Scaling)
+**Step 4: Scale X (Horizontal Scaling)**
+1. **Red dot** appears on **right edge**
+2. **User touches and holds** the dot
+3. **Scale adjusts automatically** (Coarse → Fine)
+4. **Text changes** to "OK! Release finger"
+5. **User releases** → Advances to next step
+
+**Step 5: Scale Y (Vertical Scaling)**
 1. **Red dot** appears on **bottom edge**
-2. **Scale starts at 0.5** (everything squeezed up)
-3. **User touches and holds** the dot
-4. **Scale increases automatically** until touch hits target
-5. **Text changes** to "OK! Release finger"
-6. **User releases** → Calibration complete!
+2. **User touches and holds** the dot
+3. **Scale adjusts automatically** (Coarse → Fine)
+4. **Text changes** to "OK! Release finger"
+5. **User releases** → Round 1 complete!
+
+#### Round 2: Refinement (5 steps)
+
+**Steps 6-10: Refine All Parameters**
+- **Refine Offset X** - Ultra-fine horizontal adjustment
+- **Refine Offset Y** - Ultra-fine vertical adjustment
+- **Refine Rotation** - Ultra-fine angle adjustment
+- **Refine Scale X** - Ultra-fine horizontal scale
+- **Refine Scale Y** - Ultra-fine vertical scale
+
+Each step uses the same process as Round 1, but with enhanced precision and double lock frames.
+
+#### Round 3: Final Offset (2 steps)
+
+**Step 11: Final Offset X**
+- **Ultimate horizontal precision** adjustment
+- **Maximum accuracy** for perfect alignment
+
+**Step 12: Final Offset Y**
+- **Ultimate vertical precision** adjustment
+- **Maximum accuracy** for perfect alignment
+
+#### Step 13: Summary
+- **Calibration complete!** message
+- **Touch to exit** and return to settings
 
 ---
 
@@ -371,17 +420,18 @@ The method is **guaranteed to converge** because:
 
 ### Performance
 
-**Timing (typical):**
-- Offset X: 3-5 seconds (coarse + fine)
-- Offset Y: 3-5 seconds (coarse + fine)
-- Rotation: 4-6 seconds (optional)
-- Scale X: 2-4 seconds (coarse + fine)
-- Scale Y: 2-4 seconds (coarse + fine)
-- **Total: 15-30 seconds**
+**Timing (typical for 3-Round System):**
+- **Round 1**: 20-30 seconds (5 steps × 4-6 seconds each)
+- **Round 2**: 15-25 seconds (5 refinement steps × 3-5 seconds each)
+- **Round 3**: 6-10 seconds (2 final offset steps × 3-5 seconds each)
+- **Total: 45-65 seconds** for complete 3-round calibration
 
 **Frame rate:** 20 Hz (50ms timer)
 
-**Convergence:** Typically locks within 40-120 frames per step
+**Convergence:** 
+- Round 1: 40-120 frames per step
+- Round 2: 60-150 frames per step (enhanced precision)
+- Round 3: 80-200 frames per step (maximum precision)
 
 ---
 
@@ -463,14 +513,57 @@ Potential improvements to Suthe's Method:
 
 ---
 
+## Manual Calibration Method (Alternative)
+
+For advanced users or when the automatic 3-round calibration doesn't provide sufficient accuracy, manual calibration is available:
+
+### Manual Calibration Process
+
+1. **Access Manual Mode**: Edit `src/main.cpp` around line 125
+2. **Uncomment Emergency Reset**: Remove `//` from `resetTouchCalibrationToDefaults();`
+3. **Flash to Device**: Upload the modified firmware
+4. **Re-comment Line**: Restore the `//` and flash again
+
+### Manual Default Adjustment
+
+To change factory default values, edit **`src/hardware/display/lvgl_driver.cpp`** lines 27-34:
+
+```cpp
+static const float DEFAULT_CAL_MATRIX[7] = {
+    0.0f,    // [0] offset_x
+    0.85f,   // [1] scale_x - Try 0.80-1.05
+    0.0f,    // [2] shear_xy - Usually 0.0
+    0.0f,    // [3] offset_y
+    0.0f,    // [4] shear_yx - Usually 0.0
+    1.0f,    // [5] scale_y - Try 0.80-1.05
+    1.0f     // [6] divisor - Leave at 1.0
+};
+```
+
+**Tested Defaults:**
+- **ESP32-S3-Touch-LCD-1.85C:** `scale_x = 0.85f, scale_y = 0.90f`
+- **ESP32-S3-Touch-LCD-1.85:** `scale_x = 1.0f, scale_y = 1.0f`
+
+### When to Use Manual Calibration
+
+- **Severe touch panel issues** that automatic calibration cannot resolve
+- **Custom hardware modifications** requiring specific calibration values
+- **Debugging touch problems** during development
+- **Fine-tuning** for specific use cases
+
+> **Recommendation:** Always try the automatic 3-round calibration first. Manual calibration should only be used when the automatic system fails to provide adequate results.
+
+---
+
 ## Conclusion
 
-Suthe's Method provides an elegant balance between:
+The 3-Round Calibration System provides an optimal balance between:
 - **User-friendliness** (no precise alignment needed)
-- **Technical accuracy** (feedback loop ensures convergence)
+- **Technical accuracy** (multi-pass refinement ensures convergence)
 - **Implementation simplicity** (zone-based hit-tests only)
+- **Superior precision** (3 rounds of progressive refinement)
 
-While it may not achieve the theoretical optimum of least-squares methods, it provides **excellent practical accuracy** with **superior user experience**.
+The system evolved from the original "Suthe's Method" to provide even better accuracy through multiple refinement passes, while maintaining the intuitive user experience.
 
 ---
 

@@ -5,6 +5,9 @@
 #include <Arduino.h>
 #include "../screens/tools/timer.h"
 
+// Maximum number of history entries to keep (oldest will be deleted)
+#define MAX_HISTORY_ENTRIES 100
+
 struct LifeHistoryEvent
 {
   int net_life_change;
@@ -80,6 +83,12 @@ public:
       int new_life_total = life_total + net_change;
       LifeHistoryEvent evt{net_change, new_life_total, player_id, last_event_time, change_timestamp};
       history.push_back(evt);
+      
+      // Enforce maximum history size (delete oldest entries for RAM protection)
+      if (history.size() > MAX_HISTORY_ENTRIES) {
+        history.erase(history.begin()); // Remove oldest (first) entry
+      }
+      
       life_total = new_life_total; // Update state to latest committed value
       if (commit_callback)
         commit_callback(evt);

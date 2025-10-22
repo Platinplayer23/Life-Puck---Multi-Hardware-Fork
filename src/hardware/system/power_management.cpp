@@ -246,8 +246,7 @@ void power_suspend(bool suspend)
       Set_Backlight(original_brightness);
       display_is_dimmed = false;
     }
-    // Reset inactivity timer
-    power_reset_inactivity_timer();
+    // DON'T reset inactivity timer - keep current state during suspension
   } else {
     printf("[Power] Power management RESUMED (auto-dim and sleep re-enabled)\n");
     // Reset inactivity timer to give user a grace period

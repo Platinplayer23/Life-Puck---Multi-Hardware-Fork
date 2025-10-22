@@ -180,17 +180,79 @@
 // ============================================================================
 // 👆 TOUCH CALIBRATION DEFAULTS
 // ============================================================================
-// 7-parameter affine transformation matrix
+// 7-parameter affine transformation matrix for touch coordinate mapping
 // Used by: src/hardware/display/lvgl_driver.cpp
 // Tested values: scale_x=0.85, scale_y=0.90 for ESP32-S3-Touch-LCD-1.85C
+// 
+// 🔧 CALIBRATION ADJUSTMENT GUIDE:
+// ============================================================================
+// 
+// OFFSET_X: Horizontal position shift
+//   ➤ INCREASE value → Touch points move RIGHT
+//   ➤ DECREASE value → Touch points move LEFT
+//   ➤ Range: typically -50.0 to +50.0
+//
+// OFFSET_Y: Vertical position shift  
+//   ➤ INCREASE value → Touch points move DOWN
+//   ➤ DECREASE value → Touch points move UP
+//   ➤ Range: typically -50.0 to +50.0
+//
+// SCALE_X: Horizontal scaling (width adjustment)
+//   ➤ INCREASE value → Touch area becomes WIDER (stretches horizontally)
+//   ➤ DECREASE value → Touch area becomes NARROWER (compresses horizontally)
+//   ➤ Range: typically 0.5 to 1.5 (1.0 = no scaling)
+//
+// SCALE_Y: Vertical scaling (height adjustment)
+//   ➤ INCREASE value → Touch area becomes TALLER (stretches vertically)
+//   ➤ DECREASE value → Touch area becomes SHORTER (compresses vertically)
+//   ➤ Range: typically 0.5 to 1.5 (1.0 = no scaling)
+//
+// SHEAR_XY: Horizontal skew (tilt left/right)
+//   ➤ POSITIVE value → Touch area tilts RIGHT (top moves right, bottom moves left)
+//   ➤ NEGATIVE value → Touch area tilts LEFT (top moves left, bottom moves right)
+//   ➤ Range: typically -0.5 to +0.5 (0.0 = no skew)
+//
+// SHEAR_YX: Vertical skew (tilt up/down)
+//   ➤ POSITIVE value → Touch area tilts DOWN (left moves down, right moves up)
+//   ➤ NEGATIVE value → Touch area tilts UP (left moves up, right moves down)
+//   ➤ Range: typically -0.5 to +0.5 (0.0 = no skew)
+//
+// DIVISOR: Overall scaling factor
+//   ➤ INCREASE value → Entire touch area becomes SMALLER
+//   ➤ DECREASE value → Entire touch area becomes LARGER
+//   ➤ Range: typically 0.5 to 2.0 (1.0 = no change)
+//
+// 🎯 COMMON CALIBRATION SCENARIOS:
+// ============================================================================
+// 
+// Problem: "Touch points are too far to the right"
+// Solution: DECREASE OFFSET_X (try -10.0, -20.0, etc.)
+//
+// Problem: "Touch points are too high up"
+// Solution: INCREASE OFFSET_Y (try +10.0, +20.0, etc.)
+//
+// Problem: "Touch area is too wide horizontally"
+// Solution: DECREASE SCALE_X (try 0.8, 0.7, etc.)
+//
+// Problem: "Touch area is too tall vertically"
+// Solution: DECREASE SCALE_Y (try 0.8, 0.7, etc.)
+//
+// Problem: "Touch area is rotated clockwise"
+// Solution: ADJUST SHEAR_XY and SHEAR_YX (try small values like ±0.1)
+//
+// Problem: "Touch area is too big overall"
+// Solution: INCREASE DIVISOR (try 1.2, 1.5, etc.)
+//
+// Problem: "Touch area is too small overall"
+// Solution: DECREASE DIVISOR (try 0.8, 0.6, etc.)
 // ============================================================================
 
-#define TOUCH_CAL_DEFAULT_OFFSET_X 0.0f
-#define TOUCH_CAL_DEFAULT_SCALE_X 0.95f
+#define TOUCH_CAL_DEFAULT_OFFSET_X 23.5f
+#define TOUCH_CAL_DEFAULT_SCALE_X 0.90f
 #define TOUCH_CAL_DEFAULT_SHEAR_XY 0.0f
-#define TOUCH_CAL_DEFAULT_OFFSET_Y 0.0f
+#define TOUCH_CAL_DEFAULT_OFFSET_Y -7.0f
 #define TOUCH_CAL_DEFAULT_SHEAR_YX 0.0f
-#define TOUCH_CAL_DEFAULT_SCALE_Y 0.90f
+#define TOUCH_CAL_DEFAULT_SCALE_Y 0.95f
 #define TOUCH_CAL_DEFAULT_DIVISOR 1.0f
 
 
