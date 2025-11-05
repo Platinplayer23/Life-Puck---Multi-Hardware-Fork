@@ -1064,19 +1064,6 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🔋 Battery Safety Notice
-
-**⚠️ IMPORTANT: This device includes critical battery protection features not present in the original project.**
-
-Without the Critical Battery Protection system:
-- Battery can drain to 0V
-- Permanent battery damage may occur
-- Battery capacity and lifespan drastically reduced
-- Potential safety hazards
-
-**Always keep Low Battery Dimming enabled for your safety and battery health.**
-
----
 
 **Made with ❤️ for the tabletop gaming community**
 
