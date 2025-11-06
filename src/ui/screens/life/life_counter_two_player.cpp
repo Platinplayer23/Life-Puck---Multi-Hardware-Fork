@@ -532,12 +532,9 @@ static void arc_sweep_anim_cb_p2(void *var, int32_t v)
   update_life_label(2, interpolated_life);
 }
 
-// Animation ready callback
-static void arc_sweep_anim_ready_cb(lv_anim_t *a)
+static void register_life_counter_2p_gestures()
 {
-  // Values already loaded in init, just finish initialization
-  is_initializing_2p = false;
-  
+  // Register tap and long press gestures for both players
   register_gesture_callback(GestureType::TapTopLeft, []()
                             { increment_life(PLAYER_ONE, step_size_t::STEP_SIZE_SMALL); });
   register_gesture_callback(GestureType::TapBottomLeft, []()
@@ -571,6 +568,20 @@ static void arc_sweep_anim_ready_cb(lv_anim_t *a)
                               { if(getCurrentMenu() == MENU_NONE)
                                   renderMenu(MENU_CONTEXTUAL); });
   }
+}
+
+void refresh_gesture_callbacks_2p()
+{
+  printf("[LifeCounter2P] Refreshing gesture callbacks for new gesture mode\n");
+  register_life_counter_2p_gestures();
+}
+
+// Animation ready callback
+static void arc_sweep_anim_ready_cb(lv_anim_t *a)
+{
+  // Values already loaded in init, just finish initialization
+  is_initializing_2p = false;
+  register_life_counter_2p_gestures();
 }
 
 // Player 1: arc grows clockwise from 90° to 270°

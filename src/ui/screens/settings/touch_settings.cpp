@@ -3,6 +3,8 @@
 #include "data/constants.h"
 #include "data/themes.h"
 #include "ui/screens/menu/menu.h"
+#include "ui/screens/life/life_counter.h"
+#include "ui/screens/life/life_counter_two_player.h"
 #include "ui/helpers/ui_helpers.h"
 #include "ui/helpers/ui_constants.h"
 #include "core/state_manager.h"
@@ -62,6 +64,15 @@ void renderTouchSettingsMenu()
     mode = (mode == 0) ? 1 : 0;
     player_store.putInt(KEY_GESTURE_MODE, mode);
     printf("[TouchSettings] Gesture control mode changed to: %d (%s)\n", mode, (mode == 0) ? "Life Step: Swipe" : "Life Step: Long Press");
+
+    // Refresh gesture callbacks for the currently active player mode
+    PlayerMode player_mode = (PlayerMode)player_store.getInt(KEY_PLAYER_MODE, PLAYER_MODE_ONE_PLAYER);
+    if (player_mode == PLAYER_MODE_ONE_PLAYER) {
+      refresh_gesture_callbacks_1p();
+    } else {
+      refresh_gesture_callbacks_2p();
+    }
+
     lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
     lv_obj_t *label = lv_obj_get_child(btn, 0);
     lv_label_set_text(label, (mode == 0) ? "Life Step: Swipe" : "Life Step: Long Press"); });

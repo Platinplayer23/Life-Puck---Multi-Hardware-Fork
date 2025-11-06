@@ -283,6 +283,17 @@
 // Used by: src/hardware/audio/simple_audio.h and simple_audio.cpp
 // ============================================================================
 
+// Audio Menu Availability
+// ============================================================================
+// Controls whether the Audio settings menu appears in the Settings overlay
+// By default, audio menu is only shown on BOARD_1_85C (has built-in speaker)
+// Set ENABLE_AUDIO_MENU to true to force-enable audio menu on all boards
+// Set ENABLE_AUDIO_MENU to false to force-disable audio menu on all boards
+// Comment out ENABLE_AUDIO_MENU to use automatic detection (default behavior)
+// ============================================================================
+// #define ENABLE_AUDIO_MENU true  // Uncomment to force enable
+// #define ENABLE_AUDIO_MENU false // Uncomment to force disable
+
 #define AUDIO_ENABLED_DEFAULT 1 // 1=ON, 0=OFF
 #define AUDIO_VOLUME_DEFAULT 10 // Volume: 0-100
 #define TIMER_SOUND_DEFAULT 1   // 1=ON, 0=OFF

@@ -160,8 +160,17 @@ void renderSettingsOverlay()
   ui_create_button(settings_menu, "Presets", 4, 1, [](lv_event_t *e)
                    { renderMenu(MENU_PRESET_EDITOR); });
   ui_create_button(settings_menu, "Start Life", 5, 0, btn_life_event_cb);
-#ifdef BOARD_1_85C
-  // Audio settings only available on C model (has speaker)
+
+  // Audio settings availability logic:
+  // - If ENABLE_AUDIO_MENU is defined (true/false), use that value
+  // - Otherwise, default to BOARD_1_85C detection (C model has speaker)
+#if defined(ENABLE_AUDIO_MENU)
+  #if ENABLE_AUDIO_MENU
+    ui_create_button(settings_menu, "Audio", 5, 1, [](lv_event_t *e)
+                     { renderMenu(MENU_AUDIO_SETTINGS); });
+  #endif
+#elif defined(BOARD_1_85C)
+  // Audio settings only available on C model (has speaker) when auto-detecting
   ui_create_button(settings_menu, "Audio", 5, 1, [](lv_event_t *e)
                    { renderMenu(MENU_AUDIO_SETTINGS); });
 #endif
