@@ -53,21 +53,25 @@ void Lvgl_Display_Flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
 
 void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data) {
     Touch_Read_Data();
-    
+
     if (getCurrentMenu() == MENU_TOUCH_CALIBRATION) {
         data->state = LV_INDEV_STATE_RELEASED;
         return;
     }
-    
+
     if (touch_data.points != 0) {
         power_reset_inactivity_timer();
-        
-        if (power_should_ignore_touch()) {
+
+        // Block touches during the wake delay OR if this is the wake touch itself
+        if (power_should_ignore_touch() || power_should_ignore_wake_touch()) {
             data->state = LV_INDEV_STATE_RELEASED;
             return;
         }
+    } else {
+        // Touch released - clear the wake touch flag so next touch works normally
+        power_clear_wake_touch_flag();
     }
-    
+
     if (touch_data.points != 0) {
         int raw_x = touch_data.x;
         int raw_y = touch_data.y;
