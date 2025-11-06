@@ -20,6 +20,7 @@ void life_counter_loop();
 void teardown_life_counter();
 void refresh_life_counter_theme();
 void resetLastLoadedTheme();  // Reset theme tracker for preset changes  // NEW: Refresh theme without full re-render
+void refresh_gesture_callbacks_1p();  // Refresh gesture callbacks when gesture mode changes
 
 // *** PERSISTENT LIFE STORAGE ***
 void saveLifeToNVS(int life_value, int player = 1);

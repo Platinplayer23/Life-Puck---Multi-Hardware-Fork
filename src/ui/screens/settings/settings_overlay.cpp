@@ -18,7 +18,7 @@
 // Hardware
 // ============================================
 #include "hardware/system/battery_state.h"
-#include "hardware/touch/touch_cst816.h"
+#include "hardware/touch/Touch_CST816.h"
 
 // ============================================
 // UI Screens
@@ -32,6 +32,8 @@
 // UI Helpers
 // ============================================
 #include "ui/helpers/animation_helpers.h"
+#include "ui/helpers/ui_helpers.h"
+#include "ui/helpers/ui_constants.h"
 
 // ============================================
 // Data Layer
@@ -40,13 +42,12 @@
 #include "data/themes.h"
 #include "hardware/audio/simple_audio.h"
 
-
 extern lv_obj_t *settings_menu;
 extern lv_obj_t *life_counter_container;
 extern lv_obj_t *life_counter_container_2p;
 
 // Theme tracking for Settings menu
-static const Theme* last_settings_theme = nullptr;
+static const Theme *last_settings_theme = nullptr;
 
 static void btn_life_event_cb(lv_event_t *e)
 {
@@ -57,7 +58,7 @@ void renderSettingsOverlay()
 {
   teardownSettingsOverlay();
   hideLifeScreen();
-  
+
   settings_menu = lv_obj_create(lv_scr_act());
   lv_obj_set_size(settings_menu, SCREEN_WIDTH - 20, SCREEN_HEIGHT - 30);
   lv_obj_center(settings_menu);
@@ -70,8 +71,9 @@ void renderSettingsOverlay()
 
   // SWIPE TO CLOSE - Always add handler, but check setting inside
   extern CST816_Touch touch_data; // Access RAW touch data for accurate swipe detection
-  
-  lv_obj_add_event_cb(settings_menu, [](lv_event_t *e) {
+
+  lv_obj_add_event_cb(settings_menu, [](lv_event_t *e)
+                      {
     extern CST816_Touch touch_data; // Re-declare inside lambda
     static lv_point_t start_point;
     static bool is_swiping = false;
@@ -117,12 +119,11 @@ void renderSettingsOverlay()
         }
       }
       is_swiping = false;
-    }
-  }, LV_EVENT_ALL, NULL);
+    } }, LV_EVENT_ALL, NULL);
 
-  // Grid Layout: 2 columns, 7 rows (added Themes submenu)
+  // Grid Layout: 2 columns, 6 rows (Touch Settings replaces toggle buttons)
   static lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, 50, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t row_dsc[] = {40, 60, 50, 50, 50, 50, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   lv_obj_set_grid_dsc_array(settings_menu, col_dsc, row_dsc);
   lv_obj_set_layout(settings_menu, LV_LAYOUT_GRID);
   lv_obj_set_scrollbar_mode(settings_menu, LV_SCROLLBAR_MODE_AUTO);
@@ -130,176 +131,57 @@ void renderSettingsOverlay()
   // Battery indicator (Row 0 - top, centered) - Shows percentage and voltage
   lv_obj_t *battery_label = lv_label_create(settings_menu);
   lv_obj_set_grid_cell(battery_label, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_style_text_font(battery_label, &lv_font_montserrat_16, 0);
-  lv_obj_set_style_text_color(battery_label, lv_color_white(), 0);
-  
+  lv_obj_set_style_text_font(battery_label, UI_FONT_INFO, 0);
+  lv_obj_set_style_text_color(battery_label, UI_COLOR_TEXT_PRIMARY, 0);
+
   int battery_percentage = (int)(battery_get_percent() + 0.5f);
   float battery_voltage = battery_get_volts();
   char battery_text[32];
-  snprintf(battery_text, sizeof(battery_text), LV_SYMBOL_BATTERY_FULL " %d%% (%.2fV)", 
+  snprintf(battery_text, sizeof(battery_text), LV_SYMBOL_BATTERY_FULL " %d%% (%.2fV)",
            battery_percentage, battery_voltage);
   lv_label_set_text(battery_label, battery_text);
 
-  // Back button (Row 1, Centered across both columns)
-  lv_obj_t *btn_back = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_back, 120, 60);
-  lv_obj_set_style_bg_color(btn_back, lv_color_white(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_back, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 1, 1);
-  lv_obj_t *lbl_back = lv_label_create(btn_back);
-  lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
-  lv_obj_set_style_text_font(lbl_back, &lv_font_montserrat_20, 0);
-  lv_obj_center(lbl_back);
-  lv_obj_set_style_text_color(lbl_back, lv_color_black(), 0);
-  lv_obj_add_event_cb(btn_back, [](lv_event_t *e)
-                      { renderMenu(MENU_CONTEXTUAL, false); }, LV_EVENT_CLICKED, NULL);
+  // Back button (Row 1) - centered, closes all menus
+  lv_obj_t *btn_back = ui_create_back_button(settings_menu, 1, 0, [](lv_event_t *e)
+                                             { renderMenu(MENU_CONTEXTUAL); });
+  lv_obj_set_grid_cell(btn_back, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 1, 1);
 
-  // Audio Settings Submenu (Row 2, Col 0)
-  lv_obj_t *btn_audio_settings = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_audio_settings, 140, 50);
-  lv_obj_set_style_bg_color(btn_audio_settings, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_audio_settings, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 2, 1);
-  lv_obj_t *lbl_audio_settings = lv_label_create(btn_audio_settings);
-  lv_label_set_text(lbl_audio_settings, "Audio");
-  lv_obj_set_style_text_font(lbl_audio_settings, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_audio_settings, getThemeTextColor(), 0);  // Theme text color
-  lv_obj_center(lbl_audio_settings);
-  lv_obj_add_event_cb(btn_audio_settings, [](lv_event_t *e)
-                      { renderMenu(MENU_AUDIO_SETTINGS); }, LV_EVENT_CLICKED, NULL);
+  // Menu buttons using UI helpers
+  ui_create_button(settings_menu, "Timer", 2, 0, [](lv_event_t *e)
+                   { renderMenu(MENU_TIMER_SETTINGS); });
+  ui_create_button(settings_menu, "Power", 2, 1, [](lv_event_t *e)
+                   { renderMenu(MENU_POWER_SETTINGS); });
+  ui_create_button(settings_menu, "Touch", 3, 0, [](lv_event_t *e)
+                   { renderMenu(MENU_TOUCH_SETTINGS); });
+  ui_create_button(settings_menu, "Themes", 3, 1, [](lv_event_t *e)
+                   { renderMenu(MENU_THEME_SETTINGS); });
+  ui_create_button(settings_menu, "Counters", 4, 0, [](lv_event_t *e)
+                   { renderCountersSettings(); });
+  ui_create_button(settings_menu, "Presets", 4, 1, [](lv_event_t *e)
+                   { renderMenu(MENU_PRESET_EDITOR); });
+  ui_create_button(settings_menu, "Start Life", 5, 0, btn_life_event_cb);
 
-  // Timer Settings Submenu (Row 2, Col 1)
-  lv_obj_t *btn_timer_settings = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_timer_settings, 140, 50);
-  lv_obj_set_style_bg_color(btn_timer_settings, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_timer_settings, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 2, 1);
-  lv_obj_t *lbl_timer_settings = lv_label_create(btn_timer_settings);
-  lv_label_set_text(lbl_timer_settings, "Timer");
-  lv_obj_set_style_text_font(lbl_timer_settings, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_timer_settings, getThemeTextColor(), 0);  // Theme text color
-  lv_obj_center(lbl_timer_settings);
-  lv_obj_add_event_cb(btn_timer_settings, [](lv_event_t *e)
-                      { renderMenu(MENU_TIMER_SETTINGS); }, LV_EVENT_CLICKED, NULL);
+  // Audio settings availability logic:
+  // - If ENABLE_AUDIO_MENU is defined (true/false), use that value
+  // - Otherwise, default to BOARD_1_85C detection (C model has speaker)
+#if defined(ENABLE_AUDIO_MENU)
+  #if ENABLE_AUDIO_MENU
+    ui_create_button(settings_menu, "Audio", 5, 1, [](lv_event_t *e)
+                     { renderMenu(MENU_AUDIO_SETTINGS); });
+  #endif
+#elif defined(BOARD_1_85C)
+  // Audio settings only available on C model (has speaker) when auto-detecting
+  ui_create_button(settings_menu, "Audio", 5, 1, [](lv_event_t *e)
+                   { renderMenu(MENU_AUDIO_SETTINGS); });
+#endif
 
-  // Power Settings Submenu (Row 3, Col 0)
-  lv_obj_t *btn_power_settings = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_power_settings, 140, 50);
-  lv_obj_set_style_bg_color(btn_power_settings, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_power_settings, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 3, 1);
-  lv_obj_t *lbl_power_settings = lv_label_create(btn_power_settings);
-  lv_label_set_text(lbl_power_settings, "Power");
-  lv_obj_set_style_text_font(lbl_power_settings, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_power_settings, getThemeTextColor(), 0);  // Theme text color
-  lv_obj_center(lbl_power_settings);
-  lv_obj_add_event_cb(btn_power_settings, [](lv_event_t *e)
-                      { renderMenu(MENU_POWER_SETTINGS); }, LV_EVENT_CLICKED, NULL);
-
-  // Edit Presets button (Row 3, Col 1)
-  lv_obj_t *btn_edit_presets = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_edit_presets, 140, 50);
-  lv_obj_set_style_bg_color(btn_edit_presets, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_edit_presets, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 3, 1);
-  lv_obj_t *lbl_edit_presets = lv_label_create(btn_edit_presets);
-  lv_label_set_text(lbl_edit_presets, "Edit Presets");
-  lv_obj_set_style_text_font(lbl_edit_presets, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_edit_presets, getThemeTextColor(), 0);  // Theme text color
-  lv_obj_center(lbl_edit_presets);
-  lv_obj_add_event_cb(btn_edit_presets, [](lv_event_t *e)
-                      { renderMenu(MENU_PRESET_EDITOR); }, LV_EVENT_CLICKED, NULL);
-
-  // Themes Settings Submenu (Row 4, Col 0) - NEW
-  lv_obj_t *btn_theme_settings = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_theme_settings, 140, 50);
-  lv_obj_set_style_bg_color(btn_theme_settings, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_theme_settings, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
-  lv_obj_t *lbl_theme_settings = lv_label_create(btn_theme_settings);
-  lv_label_set_text(lbl_theme_settings, "Themes");
-  lv_obj_set_style_text_font(lbl_theme_settings, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_theme_settings, getThemeTextColor(), 0);  // Theme text color
-  lv_obj_center(lbl_theme_settings);
-  lv_obj_add_event_cb(btn_theme_settings, [](lv_event_t *e)
-                      { renderMenu(MENU_THEME_SETTINGS); }, LV_EVENT_CLICKED, NULL);
-
-  // Counters Settings button (Row 4, Col 1) - NEW
-  lv_obj_t *btn_counters = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_counters, 140, 50);
-  lv_obj_set_style_bg_color(btn_counters, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_counters, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 4, 1);
-  lv_obj_t *lbl_counters = lv_label_create(btn_counters);
-  lv_label_set_text(lbl_counters, "Counters");
-  lv_obj_set_style_text_font(lbl_counters, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_counters, getThemeTextColor(), 0);  // Theme text color
-  lv_obj_center(lbl_counters);
-  lv_obj_add_event_cb(btn_counters, [](lv_event_t *e)
-                      { render_counters_settings(); }, LV_EVENT_CLICKED, NULL);
-
-  // Touch Calibration button (Row 5, Col 1) - MOVED from Row 4
-  lv_obj_t *btn_touch_cal = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_touch_cal, 120, 50);
-  lv_obj_set_style_bg_color(btn_touch_cal, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_touch_cal, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 5, 1);
-  lv_obj_t *lbl_touch_cal = lv_label_create(btn_touch_cal);
-  lv_label_set_text(lbl_touch_cal, "Touch Cal");
-  lv_obj_set_style_text_font(lbl_touch_cal, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_touch_cal, getThemeTextColor(), 0);  // Theme text color
-  lv_obj_center(lbl_touch_cal);
-  lv_obj_add_event_cb(btn_touch_cal, [](lv_event_t *e)
-                      { renderMenu(MENU_TOUCH_CALIBRATION); }, LV_EVENT_CLICKED, NULL);
-
-  // Start Life button (Row 5, Col 0)
-  lv_obj_t *btn_life = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_life, 120, 50);
-  lv_obj_set_style_bg_color(btn_life, getThemeButtonColor(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_life, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 5, 1);
-  lv_obj_t *lbl_life = lv_label_create(btn_life);
-  lv_label_set_text(lbl_life, "Start Life");
-  lv_obj_set_style_text_font(lbl_life, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_life, getThemeTextColor(), 0);  // Theme text color
-  lv_obj_center(lbl_life);
-  lv_obj_add_event_cb(btn_life, btn_life_event_cb, LV_EVENT_CLICKED, NULL);
-
-
-  // Swipe to Close Button (Row 6, Col 0)
-  bool swipe_enabled_btn = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
-  lv_obj_t *btn_swipe = lv_btn_create(settings_menu);
-  lv_obj_set_size(btn_swipe, 120, 50);
-  lv_obj_set_style_bg_color(btn_swipe, (swipe_enabled_btn ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_swipe, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 6, 1);
-  lv_obj_t *lbl_swipe = lv_label_create(btn_swipe);
-  lv_label_set_text(lbl_swipe, swipe_enabled_btn ? "Swipe: ON" : "Swipe: OFF");
-  lv_obj_set_style_text_font(lbl_swipe, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(lbl_swipe, (swipe_enabled_btn ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when ON, white when OFF
-  lv_obj_center(lbl_swipe);
-  lv_obj_add_event_cb(btn_swipe, [](lv_event_t *e)
-                      {
-                        int swipe_state = player_store.getInt(KEY_SWIPE_TO_CLOSE, 0);
-                        swipe_state = (swipe_state == 0) ? 1 : 0;
-                        player_store.putInt(KEY_SWIPE_TO_CLOSE, swipe_state);
-                        printf("[Settings] Swipe to close toggled to: %d\n", swipe_state);
-                        // Update button text and color directly (no re-render)
-    lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
-    lv_obj_t *label = lv_obj_get_child(btn, 0);
-                        bool swipe_enabled = (swipe_state != 0);
-                        lv_label_set_text(label, swipe_enabled ? "Swipe: ON" : "Swipe: OFF");
-                        lv_obj_set_style_bg_color(btn, (swipe_enabled ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
-                        lv_obj_set_style_text_color(label, (swipe_enabled ? getThemeTextColor() : lv_color_white()), 0);
-                        
-                        // No need to update event handlers - they check the setting dynamically
-  }, LV_EVENT_CLICKED, NULL);
-
-  // Spacer (Row 7, Col 0) - Empty space for scrolling
-  lv_obj_t *spacer = lv_obj_create(settings_menu);
-  lv_obj_set_size(spacer, 120, 50);
-  lv_obj_set_grid_cell(spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 7, 1);
-  lv_obj_set_style_bg_opa(spacer, LV_OPA_TRANSP, 0);
-  lv_obj_set_style_border_opa(spacer, LV_OPA_TRANSP, 0);
-  lv_obj_clear_flag(spacer, LV_OBJ_FLAG_CLICKABLE);
-
-  // Extra Spacer for Scrolling (Row 8, spanning both columns)
+  // Extra Spacer for Scrolling (Row 6, spanning both columns)
   lv_obj_t *extra_spacer = lv_obj_create(settings_menu);
-  lv_obj_set_size(extra_spacer, 10, 200);  // 200px hoch für Scrolling
-  lv_obj_set_grid_cell(extra_spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 8, 1);  // Row 8, spanning both columns
-  lv_obj_set_style_bg_opa(extra_spacer, LV_OPA_TRANSP, 0);  // Unsichtbar
-  lv_obj_set_style_border_opa(extra_spacer, LV_OPA_TRANSP, 0);  // Keine Border
-  lv_obj_clear_flag(extra_spacer, LV_OBJ_FLAG_CLICKABLE);  // Nicht klickbar
+  lv_obj_set_size(extra_spacer, 10, 50);
+  lv_obj_set_grid_cell(extra_spacer, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 6, 1);
+  lv_obj_set_style_bg_opa(extra_spacer, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_border_opa(extra_spacer, LV_OPA_TRANSP, 0);
+  lv_obj_clear_flag(extra_spacer, LV_OBJ_FLAG_CLICKABLE);
 }
 
 void teardownSettingsOverlay()
@@ -309,16 +191,16 @@ void teardownSettingsOverlay()
     lv_obj_del(settings_menu);
     settings_menu = nullptr;
   }
-  last_settings_theme = nullptr;  // Reset theme tracking
+  last_settings_theme = nullptr; // Reset theme tracking
 }
 
 /**
  * @brief Reset theme tracker to force refresh on next render
- * 
+ *
  * Used when preset changes in Automatic mode to ensure
  * Settings menu theme updates immediately.
  */
-void resetLastSettingsTheme() {
-  last_settings_theme = nullptr;  // Force refresh on next render
+void resetLastSettingsTheme()
+{
+  last_settings_theme = nullptr; // Force refresh on next render
 }
-

@@ -8,6 +8,8 @@ void power_management_init();
 void power_check_inactivity();
 void power_reset_inactivity_timer();
 bool power_should_ignore_touch(); // Check if touches should be ignored after wake
+bool power_should_ignore_wake_touch(); // Check if current touch woke the display
+void power_clear_wake_touch_flag(); // Clear the wake touch flag
 void power_set_brightness(int level); // Level 0-100 (for compatibility)
 void power_sleep_display();
 void power_wake_display();

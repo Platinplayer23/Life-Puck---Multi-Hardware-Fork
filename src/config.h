@@ -1,7 +1,7 @@
 // ============================================================================
 // LIFEPUCK ESP32-S3 CONFIGURATION FILE
 // ============================================================================
-// 
+//
 // SINGLE SOURCE OF TRUTH for all user-configurable settings
 // ALL values defined here are used exclusively by the code
 // Change values here and recompile to apply
@@ -20,12 +20,11 @@
 // ⚠️  IMPORTANT: Set back to false for production releases!
 // ============================================================================
 
-#define FORCE_DEFAULT_CALIBRATION false  // Force touch calibration to defaults
-#define FORCE_DEFAULT_PRESETS false      // Force presets to factory defaults
-#define FORCE_FACTORY_RESET false        // Reset ALL settings to defaults
-#define FORCE_NVS_CLEAR false            // Erase ALL saved data (nuclear option)
-#define SKIP_INITIAL_CALIBRATION false   // Skip calibration screen on first boot
-
+#define FORCE_DEFAULT_CALIBRATION false // Force touch calibration to defaults
+#define FORCE_DEFAULT_PRESETS false     // Force presets to factory defaults
+#define FORCE_FACTORY_RESET false       // Reset ALL settings to defaults
+#define FORCE_NVS_CLEAR false           // Erase ALL saved data (nuclear option)
+#define SKIP_INITIAL_CALIBRATION false  // Skip calibration screen on first boot
 
 // ============================================================================
 // 🎨 THEME CONFIGURATION
@@ -39,28 +38,31 @@
 #define THEME_OPACITY_YUGIOH 180
 #define THEME_OPACITY_MAGIC 180
 #define THEME_OPACITY_POKEMON 180
+#define THEME_OPACITY_FAB 180
 
 // Theme Button Colors (RGB hex: 0xRRGGBB)
-#define THEME_COLOR_DEFAULT 0x0070FF   // Lightning Blue
-#define THEME_COLOR_YUGIOH 0xFFD700    // Gold
-#define THEME_COLOR_MAGIC 0x9B30FF     // Purple
-#define THEME_COLOR_POKEMON 0xDC0A2D   // Red
+#define THEME_COLOR_DEFAULT 0x0070FF // Lightning Blue
+#define THEME_COLOR_YUGIOH 0xFFD700  // Gold
+#define THEME_COLOR_MAGIC 0x9B30FF   // Purple
+#define THEME_COLOR_POKEMON 0xDC0A2D // Red
+#define THEME_COLOR_FAB 0x8B0006     // Dark Red (Flesh & Blood)
 
 // Theme Icon Colors
-#define THEME_ICON_COLOR_DEFAULT 0xFFFFFF  // White
-#define THEME_ICON_COLOR_YUGIOH 0xFFD700   // Gold
-#define THEME_ICON_COLOR_MAGIC 0x9B30FF    // Purple
-#define THEME_ICON_COLOR_POKEMON 0xDC0A2D  // Red
+#define THEME_ICON_COLOR_DEFAULT 0xFFFFFF // White
+#define THEME_ICON_COLOR_YUGIOH 0xFFD700  // Gold
+#define THEME_ICON_COLOR_MAGIC 0x9B30FF   // Purple
+#define THEME_ICON_COLOR_POKEMON 0xDC0A2D // Red
+#define THEME_ICON_COLOR_FAB 0x8B0006     // Dark Red
 
 // Theme Text Colors (ensures proper contrast)
-#define THEME_TEXT_COLOR_DEFAULT 0xFFFFFF  // White
-#define THEME_TEXT_COLOR_YUGIOH 0x000000   // Black
-#define THEME_TEXT_COLOR_MAGIC 0xFFFFFF    // White
-#define THEME_TEXT_COLOR_POKEMON 0xFFFFFF  // White
+#define THEME_TEXT_COLOR_DEFAULT 0xFFFFFF // White
+#define THEME_TEXT_COLOR_YUGIOH 0x000000  // Black
+#define THEME_TEXT_COLOR_MAGIC 0xFFFFFF   // White
+#define THEME_TEXT_COLOR_POKEMON 0xFFFFFF // White
+#define THEME_TEXT_COLOR_FAB 0xFFFFFF     // White
 
 // Back Button Text Color
-#define BACK_BUTTON_TEXT_COLOR 0x000000    // Black
-
+#define BACK_BUTTON_TEXT_COLOR 0x000000 // Black
 
 // ============================================================================
 // 🎰 DICE AND COIN ANIMATION SETTINGS
@@ -73,20 +75,19 @@
 #define ENABLE_COIN_ANIMATION true
 
 // Animation timing
-#define DICE_ANIMATION_DURATION_MS 800      // Total animation time (ms)
-#define COIN_ANIMATION_DURATION_MS 1000     // Total animation time (ms)
+#define DICE_ANIMATION_DURATION_MS 800  // Total animation time (ms)
+#define COIN_ANIMATION_DURATION_MS 1000 // Total animation time (ms)
 
 // Animation behavior
-#define DICE_CYCLES 15                      // How many random numbers to show
-#define COIN_CYCLES 12                      // How many flips (Heads/Tails)
+#define DICE_CYCLES 15 // How many random numbers to show
+#define COIN_CYCLES 12 // How many flips (Heads/Tails)
 
 // Speed-up factor (each cycle gets longer by this amount)
-#define ANIMATION_SLOWDOWN_MS 10            // Add 10ms to each subsequent cycle
+#define ANIMATION_SLOWDOWN_MS 10 // Add 10ms to each subsequent cycle
 
 // Visual effects
-#define ANIMATION_SCALE_BOUNCE true         // Scale up/down during animation
-#define ANIMATION_SOUND_TICKS true          // Beep on each change (if audio on)
-
+#define ANIMATION_SCALE_BOUNCE true // Scale up/down during animation
+#define ANIMATION_SOUND_TICKS true  // Beep on each change (if audio on)
 
 // ============================================================================
 // 🪄 RESULT POPUP DISPLAY DURATIONS
@@ -99,71 +100,71 @@
 #define COIN_RESULT_HOLD_MS 1000
 #define GENERIC_RESULT_HOLD_MS 1000
 
-
 // ============================================================================
 // 🎮 PRESET DEFINITIONS
 // ============================================================================
 // TCG game presets: name, starting life, steps, theme assignment
 // Used by: src/data/tcg_presets.cpp
-// Theme values: 0=Off, 1=Yugioh, 2=Magic, 3=Pokemon, 4=Default
+// Theme values: 0=Off, 1=Yugioh, 2=Magic, 3=Pokemon, 4=Default, 5=FAB
 // ============================================================================
 
-// PRESET 0: MTG Standard
-#define PRESET_0_NAME "MTG Standard"
-#define PRESET_0_STARTING_LIFE 20
+// PRESET 0: Flesh & Blood CC (Classic Constructed)
+#define PRESET_0_NAME "FAB CC"
+#define PRESET_0_STARTING_LIFE 40
 #define PRESET_0_SMALL_STEP 1
 #define PRESET_0_LARGE_STEP 5
-#define PRESET_0_THEME 2                 // Magic
+#define PRESET_0_THEME 5 // FAB
 
-// PRESET 1: MTG Commander
-#define PRESET_1_NAME "MTG Commander"
-#define PRESET_1_STARTING_LIFE 40
+// PRESET 1: Flesh & Blood Blitz
+#define PRESET_1_NAME "FAB Blitz"
+#define PRESET_1_STARTING_LIFE 20
 #define PRESET_1_SMALL_STEP 1
-#define PRESET_1_LARGE_STEP 10
-#define PRESET_1_THEME 2                 // Magic
+#define PRESET_1_LARGE_STEP 5
+#define PRESET_1_THEME 5 // FAB
 
-// PRESET 2: Pokemon TCG
-#define PRESET_2_NAME "Pokemon TCG"
-#define PRESET_2_STARTING_LIFE 60
-#define PRESET_2_SMALL_STEP 10
-#define PRESET_2_LARGE_STEP 30
-#define PRESET_2_THEME 3                 // Pokemon
+// PRESET 2: MTG Standard
+#define PRESET_2_NAME "MTG Standard"
+#define PRESET_2_STARTING_LIFE 20
+#define PRESET_2_SMALL_STEP 1
+#define PRESET_2_LARGE_STEP 5
+#define PRESET_2_THEME 2 // Magic
 
-// PRESET 3: Yu-Gi-Oh!
-#define PRESET_3_NAME "Yu-Gi-Oh!"
-#define PRESET_3_STARTING_LIFE 8000
-#define PRESET_3_SMALL_STEP 50
-#define PRESET_3_LARGE_STEP 500
-#define PRESET_3_THEME 1                 // Yugioh
+// PRESET 3: MTG Commander
+#define PRESET_3_NAME "MTG Commander"
+#define PRESET_3_STARTING_LIFE 40
+#define PRESET_3_SMALL_STEP 1
+#define PRESET_3_LARGE_STEP 10
+#define PRESET_3_THEME 2 // Magic
 
-// PRESET 4: Flesh & Blood
-#define PRESET_4_NAME "Flesh & Blood"
-#define PRESET_4_STARTING_LIFE 40
-#define PRESET_4_SMALL_STEP 1
-#define PRESET_4_LARGE_STEP 5
-#define PRESET_4_THEME 4                 // Yugioh
+// PRESET 4: Pokemon TCG
+#define PRESET_4_NAME "Pokemon TCG"
+#define PRESET_4_STARTING_LIFE 60
+#define PRESET_4_SMALL_STEP 10
+#define PRESET_4_LARGE_STEP 30
+#define PRESET_4_THEME 3 // Pokemon
 
-// PRESET 5: Lorcana
-#define PRESET_5_NAME "Lorcana"
-#define PRESET_5_STARTING_LIFE 20
-#define PRESET_5_SMALL_STEP 1
-#define PRESET_5_LARGE_STEP 5
-#define PRESET_5_THEME 4                 // Yugioh
+// PRESET 5: Yu-Gi-Oh!
+#define PRESET_5_NAME "Yu-Gi-Oh!"
+#define PRESET_5_STARTING_LIFE 8000
+#define PRESET_5_SMALL_STEP 50
+#define PRESET_5_LARGE_STEP 500
+#define PRESET_5_THEME 1 // Yugioh
 
-// PRESET 6: One Piece TCG
-#define PRESET_6_NAME "One Piece TCG"
-#define PRESET_6_STARTING_LIFE 5
+// PRESET 6: Lorcana
+#define PRESET_6_NAME "Lorcana"
+#define PRESET_6_STARTING_LIFE 20
 #define PRESET_6_SMALL_STEP 1
-#define PRESET_6_LARGE_STEP 2
-#define PRESET_6_THEME 4                 // Yugioh
+#define PRESET_6_LARGE_STEP 5
+#define PRESET_6_THEME 4 // Default
 
-// PRESET 7-9: Custom Presets
-#define PRESET_7_NAME "Custom 8"
-#define PRESET_7_STARTING_LIFE 20
+// PRESET 7: One Piece TCG
+#define PRESET_7_NAME "One Piece TCG"
+#define PRESET_7_STARTING_LIFE 5
 #define PRESET_7_SMALL_STEP 1
-#define PRESET_7_LARGE_STEP 5
-#define PRESET_7_THEME 4
+#define PRESET_7_LARGE_STEP 2
+#define PRESET_7_THEME 4 // Default
 
+// PRESET 8-9: Custom Presets
 #define PRESET_8_NAME "Custom 9"
 #define PRESET_8_STARTING_LIFE 20
 #define PRESET_8_SMALL_STEP 1
@@ -176,23 +177,22 @@
 #define PRESET_9_LARGE_STEP 5
 #define PRESET_9_THEME 4
 
-
 // ============================================================================
 // 👆 TOUCH CALIBRATION DEFAULTS
 // ============================================================================
 // 7-parameter affine transformation matrix for touch coordinate mapping
 // Used by: src/hardware/display/lvgl_driver.cpp
 // Tested values: scale_x=0.85, scale_y=0.90 for ESP32-S3-Touch-LCD-1.85C
-// 
+//
 // 🔧 CALIBRATION ADJUSTMENT GUIDE:
 // ============================================================================
-// 
+//
 // OFFSET_X: Horizontal position shift
 //   ➤ INCREASE value → Touch points move RIGHT
 //   ➤ DECREASE value → Touch points move LEFT
 //   ➤ Range: typically -50.0 to +50.0
 //
-// OFFSET_Y: Vertical position shift  
+// OFFSET_Y: Vertical position shift
 //   ➤ INCREASE value → Touch points move DOWN
 //   ➤ DECREASE value → Touch points move UP
 //   ➤ Range: typically -50.0 to +50.0
@@ -224,7 +224,7 @@
 //
 // 🎯 COMMON CALIBRATION SCENARIOS:
 // ============================================================================
-// 
+//
 // Problem: "Touch points are too far to the right"
 // Solution: DECREASE OFFSET_X (try -10.0, -20.0, etc.)
 //
@@ -255,7 +255,6 @@
 #define TOUCH_CAL_DEFAULT_SCALE_Y 0.95f
 #define TOUCH_CAL_DEFAULT_DIVISOR 1.0f
 
-
 // ============================================================================
 // 🖥️  DISPLAY & POWER DEFAULTS
 // ============================================================================
@@ -264,19 +263,18 @@
 // ============================================================================
 
 // Screen Brightness (0-255)
-#define BRIGHTNESS_DEFAULT 100           // Default: 100 (39%)
+#define BRIGHTNESS_DEFAULT 100 // Default: 100 (39%)
 
 // Auto-Dim Settings (in seconds)
 // Available UI options: 0, 30, 60, 120, 300
-#define AUTO_DIM_DEFAULT 60              // Default: 60s (1 minute)
+#define AUTO_DIM_DEFAULT 60 // Default: 60s (1 minute)
 
 // Sleep Settings (in seconds)
 // Available UI options: 0, 120, 300, 600
-#define SLEEP_DEFAULT 300                // Default: 300s (5 minutes)
+#define SLEEP_DEFAULT 300 // Default: 300s (5 minutes)
 
 // Low Battery Dimming
-#define LOW_BATTERY_DIM_DEFAULT 1        // Default: 1 (ON)
-
+#define LOW_BATTERY_DIM_DEFAULT 1 // Default: 1 (ON)
 
 // ============================================================================
 // 🔊 AUDIO DEFAULTS
@@ -285,10 +283,20 @@
 // Used by: src/hardware/audio/simple_audio.h and simple_audio.cpp
 // ============================================================================
 
-#define AUDIO_ENABLED_DEFAULT 1          // 1=ON, 0=OFF
-#define AUDIO_VOLUME_DEFAULT 10          // Volume: 0-100
-#define TIMER_SOUND_DEFAULT 1            // 1=ON, 0=OFF
+// Audio Menu Availability
+// ============================================================================
+// Controls whether the Audio settings menu appears in the Settings overlay
+// By default, audio menu is only shown on BOARD_1_85C (has built-in speaker)
+// Set ENABLE_AUDIO_MENU to true to force-enable audio menu on all boards
+// Set ENABLE_AUDIO_MENU to false to force-disable audio menu on all boards
+// Comment out ENABLE_AUDIO_MENU to use automatic detection (default behavior)
+// ============================================================================
+// #define ENABLE_AUDIO_MENU true  // Uncomment to force enable
+// #define ENABLE_AUDIO_MENU false // Uncomment to force disable
 
+#define AUDIO_ENABLED_DEFAULT 1 // 1=ON, 0=OFF
+#define AUDIO_VOLUME_DEFAULT 10 // Volume: 0-100
+#define TIMER_SOUND_DEFAULT 1   // 1=ON, 0=OFF
 
 // ============================================================================
 // ⏱️  TIMER DEFAULTS
@@ -297,9 +305,8 @@
 // Used by: src/ui/screens/settings/timer_settings.cpp
 // ============================================================================
 
-#define TIMER_ENABLED_DEFAULT 0          // 0=OFF, 1=ON
-#define TIMER_DEFAULT_MINUTES 10         // Default round time in minutes
-
+#define TIMER_ENABLED_DEFAULT 0  // 0=OFF, 1=ON
+#define TIMER_DEFAULT_MINUTES 10 // Default round time in minutes
 
 // ============================================================================
 // 🔢 SIMPLE COUNTERS CONFIGURATION
@@ -309,14 +316,14 @@
 // ============================================================================
 
 // Counter System Settings
-#define SIMPLE_COUNTER_COUNT 4            // Number of available counter slots (fixed at 4)
-#define COUNTER_MAX_VALUE 999             // Maximum counter value (prevents overflow)
+#define SIMPLE_COUNTER_COUNT 4 // Number of available counter slots (fixed at 4)
+#define COUNTER_MAX_VALUE 999  // Maximum counter value (prevents overflow)
 
 // Counter Visual Appearance
-#define COUNTER_SIZE 50                   // Base size of counter circles in pixels
-#define COUNTER_OPACITY 180               // Counter background opacity (180 = 70% opaque)
-#define COUNTER_BORDER_OPACITY 153        // Counter border opacity (153 = 60% opacity)
-#define COUNTER_GRADIENT_DARKEN 30        // How much to darken gradient color (0-100)
+#define COUNTER_SIZE 50            // Base size of counter circles in pixels
+#define COUNTER_OPACITY 180        // Counter background opacity (180 = 70% opaque)
+#define COUNTER_BORDER_OPACITY 153 // Counter border opacity (153 = 60% opacity)
+#define COUNTER_GRADIENT_DARKEN 30 // How much to darken gradient color (0-100)
 
 // Counter Positioning (4 corners)
 // IMPORTANT: These values are OFFSETS from screen edges, not center coordinates!
@@ -324,28 +331,27 @@
 // - Lower values = closer to edges
 // - All values are in pixels from the respective screen edge
 // - Screen size is 360x360px, so max safe values are around 300px
-#define COUNTER_1_X 50                    // Top-Left: 50px from left edge, 50px from top edge
-#define COUNTER_1_Y 50                    // Top-Left: 50px from left edge, 50px from top edge
-#define COUNTER_2_X 50                    // Top-Right: 50px from right edge, 50px from top edge
-#define COUNTER_2_Y 50                    // Top-Right: 50px from right edge, 50px from top edge
-#define COUNTER_3_X 50                    // Bottom-Left: 50px from left edge, 50px from bottom edge
-#define COUNTER_3_Y 50                    // Bottom-Left: 50px from left edge, 50px from bottom edge
-#define COUNTER_4_X 50                    // Bottom-Right: 50px from right edge, 50px from bottom edge
-#define COUNTER_4_Y 50                    // Bottom-Right: 50px from right edge, 50px from bottom edge
+#define COUNTER_1_X 50 // Top-Left: 50px from left edge, 50px from top edge
+#define COUNTER_1_Y 50 // Top-Left: 50px from left edge, 50px from top edge
+#define COUNTER_2_X 50 // Top-Right: 50px from right edge, 50px from top edge
+#define COUNTER_2_Y 50 // Top-Right: 50px from right edge, 50px from top edge
+#define COUNTER_3_X 50 // Bottom-Left: 50px from left edge, 50px from bottom edge
+#define COUNTER_3_Y 50 // Bottom-Left: 50px from left edge, 50px from bottom edge
+#define COUNTER_4_X 50 // Bottom-Right: 50px from right edge, 50px from bottom edge
+#define COUNTER_4_Y 50 // Bottom-Right: 50px from right edge, 50px from bottom edge
 
 // Counter Interaction Timing (milliseconds)
 #define COUNTER_TAP_THRESHOLD 500         // Short tap duration for increment
 #define COUNTER_LONG_PRESS_THRESHOLD 1500 // Long press duration for reset
 
 // Counter Visual Feedback Colors (hex RGB)
-#define COUNTER_NORMAL_COLOR 0x555555     // Default counter background color
-#define COUNTER_DECREMENT_COLOR 0xFFFF00  // Yellow color during decrement press
-#define COUNTER_RESET_COLOR 0xFF0000      // Red color during reset press
+#define COUNTER_NORMAL_COLOR 0x555555    // Default counter background color
+#define COUNTER_DECREMENT_COLOR 0xFFFF00 // Yellow color during decrement press
+#define COUNTER_RESET_COLOR 0xFF0000     // Red color during reset press
 
 // Counter NVS Storage Keys
-#define NVS_KEY_COUNTER_ENABLED "cnt_en_%d"  // NVS key for counter enabled state
-#define NVS_KEY_COUNTER_VALUE "cnt_val_%d"   // NVS key for counter value
-
+#define NVS_KEY_COUNTER_ENABLED "cnt_en_%d" // NVS key for counter enabled state
+#define NVS_KEY_COUNTER_VALUE "cnt_val_%d"  // NVS key for counter value
 
 // ============================================================================
 // 🎨 UI TIMING & BEHAVIOR
@@ -355,27 +361,40 @@
 // ============================================================================
 
 // Animation Durations (milliseconds)
-#define ARC_ANIMATION_DURATION 600       // Life counter arc animation
-#define GROUPER_WINDOW 500               // Life change grouping window for auto-save
+#define ARC_ANIMATION_DURATION 600 // Life counter arc animation
+#define GROUPER_WINDOW 1500        // Life change grouping window for auto-save
 
-// Touch & Gesture
-#define TOUCH_BLOCK_AFTER_WAKE_MS 300    // Block touches after wake from sleep
-#define SWIPE_THRESHOLD_PX 80            // Pixels to trigger swipe gesture
+// Touch & Gesture Control Mode
+// ============================================================================
+// Choose between two gesture control schemes:
+// 0 = CLASSIC MODE (Original behavior):
+//     - Swipe up/down = Large step adjustments (±5)
+//     - Long press center = Open menu
+// 1 = LONG PRESS MODE (New behavior):
+//     - Long press top/bottom = Large step adjustments (±5, repeats while held)
+//     - Swipe down = Open menu
+// ============================================================================
+#define GESTURE_CONTROL_MODE 1 // 0 = Classic (swipe), 1 = Long Press (hold)
+
+// Touch & Gesture Timing
+#define TOUCH_BLOCK_AFTER_WAKE_MS 300 // Block touches after wake from sleep
+#define SWIPE_THRESHOLD_PX 80         // Pixels to trigger swipe gesture
+#define LONG_PRESS_TIME_MS 500        // Time to trigger long press (milliseconds)
+#define LONG_PRESS_REPEAT_TIME_MS 500 // Repeat interval while holding long press (milliseconds)
 
 // Touch Calibration Parameters
-#define CALIBRATION_TIMEOUT_MS 10000     // Confirmation timeout (10 seconds)
-#define CALIBRATION_LOCK_FRAMES 10       // Frames to lock calibration step
-
+#define CALIBRATION_TIMEOUT_MS 10000 // Confirmation timeout (10 seconds)
+#define CALIBRATION_LOCK_FRAMES 10   // Frames to lock calibration step
 
 // ============================================================================
 // 🔧 ADVANCED FORCE FLAGS (Development only)
 // ============================================================================
 
 #define FORCE_THEME_MODE false
-#define FORCED_THEME_MODE_VALUE 0        // 0=OFF, 1=Automatic, 2=Manual
+#define FORCED_THEME_MODE_VALUE 0 // 0=OFF, 1=Automatic, 2=Manual
 
 #define FORCE_THEME_SELECTION false
-#define FORCED_THEME_VALUE 0             // 0=Off, 1=Yugioh, 2=Magic, 3=Pokemon, 4=Default
+#define FORCED_THEME_VALUE 0 // 0=Off, 1=Yugioh, 2=Magic, 3=Pokemon, 4=Default
 
 #define FORCE_AUDIO_SETTINGS false
 #define FORCED_AUDIO_ENABLED 1

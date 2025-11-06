@@ -55,6 +55,12 @@ const Theme* getMagicTheme();
 const Theme* getPokemonTheme();
 
 /**
+ * @brief Get Flesh & Blood theme (dark red with FAB artwork)
+ * @return Pointer to FAB theme configuration
+ */
+const Theme* getFabTheme();
+
+/**
  * @brief Get currently active theme based on NVS settings
  * 
  * Reads ThemeMode and ThemeSelection from NVS:

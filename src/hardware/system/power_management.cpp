@@ -21,6 +21,7 @@ static int original_brightness = 50; // Default brightness (0-100)
 static unsigned long last_wake_time = 0;  // Track when display was last woken
 static const unsigned long TOUCH_IGNORE_DELAY = TOUCH_BLOCK_AFTER_WAKE_MS;
 static bool power_management_suspended = false;  // Suspend power management during calibration
+static bool ignore_next_touch_release = false;  // Flag to ignore the touch that woke the display
 
 // Critical battery shutdown tracking
 static bool low1 = false; // Track if battery is critically low
@@ -45,19 +46,21 @@ void power_management_init()
 void power_reset_inactivity_timer()
 {
   last_activity_time = millis();
-  
+
   // Wake display if sleeping
   if (display_is_sleeping) {
     power_wake_display();
     last_wake_time = millis(); // Mark wake time to ignore touches briefly
+    ignore_next_touch_release = true;  // Ignore the touch that woke the display from sleep
   }
-  
+
   // Restore brightness if dimmed (but not if low battery dimmed)
   if (display_is_dimmed && !display_is_low_battery_dimmed) {
     original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT); // 0-100
     Set_Backlight(original_brightness);
     display_is_dimmed = false;
     last_wake_time = millis(); // Mark wake time to ignore touches briefly
+    // Don't set ignore_next_touch_release for dim - user might be actively using the device
   }
 }
 
@@ -68,6 +71,27 @@ bool power_should_ignore_touch()
     return true;
   }
   return false;
+}
+
+bool power_should_ignore_wake_touch()
+{
+  // Check if this is the touch that woke the display
+  // Also auto-clear the flag after the touch delay expires (safety mechanism)
+  if (ignore_next_touch_release) {
+    if (last_wake_time > 0 && (millis() - last_wake_time) >= TOUCH_IGNORE_DELAY) {
+      // Touch delay expired, clear the flag automatically
+      ignore_next_touch_release = false;
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+void power_clear_wake_touch_flag()
+{
+  // Clear the flag after the wake touch is consumed
+  ignore_next_touch_release = false;
 }
 
 void power_check_inactivity()

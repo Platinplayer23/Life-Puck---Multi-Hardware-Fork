@@ -37,6 +37,11 @@
 #include "data/themes.h"
 
 // ============================================
+// Config
+// ============================================
+#include "config.h"
+
+// ============================================
 // Hardware/Storage
 // ============================================
 #include <ArduinoNvs.h>
@@ -418,10 +423,9 @@ static void arc_sweep_anim_cb(void *var, int32_t v)
   update_life_label(interpolated_life);
 }
 
-static void arc_sweep_anim_ready_cb(lv_anim_t *a)
+static void register_life_counter_gestures()
 {
-  is_initializing = false;
-  
+  // Register tap and long press gestures for life adjustments
   register_gesture_callback(GestureType::TapTop, []()
                             { increment_life(step_size_t::STEP_SIZE_SMALL); });
   register_gesture_callback(GestureType::TapBottom, []()
@@ -430,17 +434,36 @@ static void arc_sweep_anim_ready_cb(lv_anim_t *a)
                             { increment_life(step_size_t::STEP_SIZE_LARGE); });
   register_gesture_callback(GestureType::LongPressBottom, []()
                             { decrement_life(step_size_t::STEP_SIZE_LARGE); });
-  register_gesture_callback(GestureType::SwipeDown, []()
-                            {
-                              if(getCurrentMenu() == MENU_NONE)
-                                renderMenu(MENU_CONTEXTUAL); });
-  
-  // NEW: Long-Press Center for Menu
-  register_gesture_callback(GestureType::LongPressCenter, []() {
-      if (getCurrentMenu() == MENU_NONE) {
-          renderMenu(MENU_CONTEXTUAL);
-      }
-  });
+
+  // Get gesture mode from NVS
+  int gesture_mode = player_store.getInt(KEY_GESTURE_MODE, GESTURE_CONTROL_MODE);
+
+  if (gesture_mode == 0) {
+    // Classic Mode: Long press center opens menu
+    register_gesture_callback(GestureType::LongPressCenter, []() {
+        if (getCurrentMenu() == MENU_NONE) {
+            renderMenu(MENU_CONTEXTUAL);
+        }
+    });
+  } else {
+    // Long Press Mode: Swipe down opens menu
+    register_gesture_callback(GestureType::SwipeDown, []()
+                              {
+                                if(getCurrentMenu() == MENU_NONE)
+                                  renderMenu(MENU_CONTEXTUAL); });
+  }
+}
+
+void refresh_gesture_callbacks_1p()
+{
+  printf("[LifeCounter] Refreshing gesture callbacks for new gesture mode\n");
+  register_life_counter_gestures();
+}
+
+static void arc_sweep_anim_ready_cb(lv_anim_t *a)
+{
+  is_initializing = false;
+  register_life_counter_gestures();
 }
 
 static arc_segment_t life_to_arc(int life_total)
