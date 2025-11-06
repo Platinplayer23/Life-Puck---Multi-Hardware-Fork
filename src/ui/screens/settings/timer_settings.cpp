@@ -4,6 +4,8 @@
 #include "data/themes.h"
 #include "ui/screens/menu/menu.h"
 #include "ui/helpers/gestures.h"
+#include "ui/helpers/ui_helpers.h"
+#include "ui/helpers/ui_constants.h"
 #include "core/state_manager.h"
 #include "ui/screens/tools/timer.h"
 #include "ui/screens/life/life_counter.h"
@@ -74,20 +76,12 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl[] = {
 void renderTimerSettingsMenu()
 {
   teardownTimerSettingsMenu();
-  
+
   // Initialize round time variable (convert seconds to minutes)
   round_time_var = get_round_time() / 60;
 
-  // Create main container - same style as settings menu
-  timer_menu = lv_obj_create(lv_scr_act());
-  lv_obj_set_size(timer_menu, SCREEN_WIDTH - 20, SCREEN_HEIGHT - 30);
-  lv_obj_center(timer_menu);
-  lv_obj_set_style_bg_color(timer_menu, lv_color_hex(0x000000), 0);
-  lv_obj_set_style_radius(timer_menu, 15, 0);
-  lv_obj_set_style_border_width(timer_menu, 0, 0);
-  lv_obj_set_flex_flow(timer_menu, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_flex_align(timer_menu, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_scrollbar_mode(timer_menu, LV_SCROLLBAR_MODE_AUTO);
+  // Create main container using standardized helper
+  timer_menu = ui_create_menu_container(lv_scr_act());
 
   // Grid Layout: Full width buttons (1 column, 5 rows)
   static lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
@@ -96,43 +90,30 @@ void renderTimerSettingsMenu()
   lv_obj_set_layout(timer_menu, LV_LAYOUT_GRID);
 
   // Title (Row 0)
-  lv_obj_t *title = lv_label_create(timer_menu);
-  lv_label_set_text(title, "Timer Settings");
-  lv_obj_set_style_text_color(title, lv_color_white(), 0);
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
-  lv_obj_set_grid_cell(title, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 0, 1);
+  ui_create_title(timer_menu, "Timer Settings", 0);
 
   // Back button (Row 1)
-  lv_obj_t *btn_back = lv_btn_create(timer_menu);
-  lv_obj_set_size(btn_back, 120, 60);
-  lv_obj_set_style_bg_color(btn_back, lv_color_white(), LV_PART_MAIN);
-  lv_obj_set_grid_cell(btn_back, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 1, 1);
-  lv_obj_t *lbl_back = lv_label_create(btn_back);
-  lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
-  lv_obj_set_style_text_font(lbl_back, &lv_font_montserrat_20, 0);
-  lv_obj_center(lbl_back);
-  lv_obj_set_style_text_color(lbl_back, lv_color_black(), 0);
-  lv_obj_add_event_cb(btn_back, [](lv_event_t *e)
-                      { renderMenu(MENU_SETTINGS); }, LV_EVENT_CLICKED, NULL);
+  lv_obj_t *btn_back = ui_create_back_button(timer_menu, 1, 0, [](lv_event_t *e)
+                                             { renderMenu(MENU_SETTINGS); });
 
   // Timer Toggle button (Row 2, Full Width)
   lv_obj_t *btn_timer_toggle = lv_btn_create(timer_menu);
-  lv_obj_set_size(btn_timer_toggle, 280, 50);
-  lv_obj_set_style_bg_color(btn_timer_toggle, (player_store.getInt(KEY_SHOW_TIMER, TIMER_ENABLED_DEFAULT) ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
+  lv_obj_set_size(btn_timer_toggle, 280, UI_BTN_HEIGHT_STANDARD);
+  lv_obj_set_style_bg_color(btn_timer_toggle, (player_store.getInt(KEY_SHOW_TIMER, TIMER_ENABLED_DEFAULT) ? getThemeButtonColor() : UI_COLOR_DISABLED), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_timer_toggle, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_t *lbl_timer = lv_label_create(btn_timer_toggle);
   uint64_t show_timer = player_store.getInt(KEY_SHOW_TIMER, TIMER_ENABLED_DEFAULT);
   lv_label_set_text(lbl_timer, (show_timer ? "Timer: ON" : "Timer: OFF"));
-  lv_obj_set_style_text_font(lbl_timer, &lv_font_montserrat_18, 0);
-  lv_obj_set_style_text_color(lbl_timer, (show_timer ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when ON
+  lv_obj_set_style_text_font(lbl_timer, UI_FONT_TOGGLE, 0);
+  lv_obj_set_style_text_color(lbl_timer, (show_timer ? getThemeTextColor() : UI_COLOR_TEXT_PRIMARY), 0);
   lv_obj_center(lbl_timer);
   lv_obj_add_event_cb(btn_timer_toggle, [](lv_event_t *e)
                       { 
                         uint64_t show_timer = toggle_show_timer();
                         lv_obj_t *btn = (lv_obj_t *)lv_event_get_target(e);
                         lv_obj_t *label = lv_obj_get_child(btn, 0);
-                        lv_obj_set_style_bg_color(btn, (show_timer ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
-                        lv_obj_set_style_text_color(label, (show_timer ? getThemeTextColor() : lv_color_white()), 0);
+                        lv_obj_set_style_bg_color(btn, (show_timer ? getThemeButtonColor() : UI_COLOR_DISABLED), LV_PART_MAIN);
+                        lv_obj_set_style_text_color(label, (show_timer ? getThemeTextColor() : UI_COLOR_TEXT_PRIMARY), 0);
                         lv_label_set_text(label, (show_timer ? "Timer: ON" : "Timer: OFF"));
                         uint64_t life_counter_mode = player_store.getInt(KEY_PLAYER_MODE, PLAYER_MODE_ONE_PLAYER);
                         if (!show_timer)
@@ -159,13 +140,13 @@ void renderTimerSettingsMenu()
   // Timer Mode Toggle (Row 3, Full Width)
   TimerMode current_timer_mode = get_timer_mode();
   lv_obj_t *btn_timer_mode = lv_btn_create(timer_menu);
-  lv_obj_set_size(btn_timer_mode, 280, 50);
+  lv_obj_set_size(btn_timer_mode, 280, UI_BTN_HEIGHT_STANDARD);
   lv_obj_set_style_bg_color(btn_timer_mode, getThemeButtonColor(), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_timer_mode, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 3, 1);
   lv_obj_t *lbl_timer_mode = lv_label_create(btn_timer_mode);
   lv_label_set_text(lbl_timer_mode, (current_timer_mode == TIMER_MODE_STOPWATCH ? "Timer Mode: Stopwatch" : "Timer Mode: Round"));
-  lv_obj_set_style_text_font(lbl_timer_mode, &lv_font_montserrat_18, 0);
-  lv_obj_set_style_text_color(lbl_timer_mode, getThemeTextColor(), 0);  // Theme text color
+  lv_obj_set_style_text_font(lbl_timer_mode, UI_FONT_TOGGLE, 0);
+  lv_obj_set_style_text_color(lbl_timer_mode, getThemeTextColor(), 0);
   lv_obj_center(lbl_timer_mode);
   lv_obj_add_event_cb(btn_timer_mode, [](lv_event_t *e)
                       {
@@ -176,41 +157,41 @@ void renderTimerSettingsMenu()
     set_timer_mode(new_mode);
     lv_label_set_text(label, (new_mode == TIMER_MODE_STOPWATCH ? "Timer Mode: Stopwatch" : "Timer Mode: Round"));
     // Re-render timer settings menu to update the Set Round Time button
-    renderTimerSettingsMenu();
-  }, LV_EVENT_CLICKED, NULL);
+    renderTimerSettingsMenu(); }, LV_EVENT_CLICKED, NULL);
 
   // Set Round Time Button (Row 4, Full Width)
   TimerMode timer_mode_for_btn = get_timer_mode();
   bool is_countdown = (timer_mode_for_btn == TIMER_MODE_COUNTDOWN);
   lv_obj_t *btn_set_time = lv_btn_create(timer_menu);
-  lv_obj_set_size(btn_set_time, 280, 50);
-  lv_obj_set_style_bg_color(btn_set_time, (is_countdown ? getThemeButtonColor() : lv_color_hex(0x444444)), LV_PART_MAIN);
+  lv_obj_set_size(btn_set_time, 280, UI_BTN_HEIGHT_STANDARD);
+  lv_obj_set_style_bg_color(btn_set_time, (is_countdown ? getThemeButtonColor() : UI_COLOR_DISABLED), LV_PART_MAIN);
   lv_obj_set_grid_cell(btn_set_time, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 4, 1);
   lbl_set_time = lv_label_create(btn_set_time); // Use static variable
   char time_text[32];
   snprintf(time_text, sizeof(time_text), "Round Time: %d min", get_round_time() / 60);
   lv_label_set_text(lbl_set_time, time_text);
-  lv_obj_set_style_text_font(lbl_set_time, &lv_font_montserrat_18, 0);
-  lv_obj_set_style_text_color(lbl_set_time, (is_countdown ? getThemeTextColor() : lv_color_white()), 0);  // Theme text when countdown
+  lv_obj_set_style_text_font(lbl_set_time, UI_FONT_TOGGLE, 0);
+  lv_obj_set_style_text_color(lbl_set_time, (is_countdown ? getThemeTextColor() : UI_COLOR_TEXT_PRIMARY), 0);
   lv_obj_center(lbl_set_time);
-  
-          // Event callback will be added after shared input system is created
+
+  // Event callback will be added after shared input system is created
 
   // Extra Spacer for Scrolling (Row 5)
   lv_obj_t *extra_spacer = lv_obj_create(timer_menu);
-  lv_obj_set_size(extra_spacer, 10, 200);
+  lv_obj_set_size(extra_spacer, 10, 50);
   lv_obj_set_grid_cell(extra_spacer, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 5, 1);
   lv_obj_set_style_bg_opa(extra_spacer, LV_OPA_TRANSP, 0);
   lv_obj_set_style_border_opa(extra_spacer, LV_OPA_TRANSP, 0);
   lv_obj_clear_flag(extra_spacer, LV_OBJ_FLAG_CLICKABLE);
 
-
   // Add swipe-to-close gesture (same as main settings menu)
   bool swipe_enabled = (player_store.getInt(KEY_SWIPE_TO_CLOSE, 0) != 0);
-  if (swipe_enabled) {
+  if (swipe_enabled)
+  {
     extern CST816_Touch touch_data; // Access RAW touch data for accurate swipe detection
-    
-    lv_obj_add_event_cb(timer_menu, [](lv_event_t *e) {
+
+    lv_obj_add_event_cb(timer_menu, [](lv_event_t *e)
+                        {
       extern CST816_Touch touch_data; // Re-declare inside lambda
       static lv_point_t start_point;
       static bool is_swiping = false;
@@ -252,8 +233,7 @@ void renderTimerSettingsMenu()
           }
         }
         is_swiping = false;
-      }
-    }, LV_EVENT_ALL, NULL);
+      } }, LV_EVENT_ALL, NULL);
   }
 
   // Initialize shared input state (like in start_life.cpp)
@@ -262,10 +242,10 @@ void renderTimerSettingsMenu()
   // Create shared text area - POSITIONED HIGHER
   shared_input_state.ta = lv_textarea_create(timer_menu);
   lv_textarea_set_one_line(shared_input_state.ta, true);
-  lv_obj_set_style_text_font(shared_input_state.ta, &lv_font_montserrat_32, 0);  // Larger
+  lv_obj_set_style_text_font(shared_input_state.ta, &lv_font_montserrat_32, 0); // Larger
   lv_obj_set_style_text_color(shared_input_state.ta, lv_color_white(), 0);
   lv_obj_set_size(shared_input_state.ta, SCREEN_WIDTH - 120, 60);
-  lv_obj_align(shared_input_state.ta, LV_ALIGN_TOP_MID, 0, 20);  // Higher
+  lv_obj_align(shared_input_state.ta, LV_ALIGN_TOP_MID, 0, 20); // Higher
   lv_obj_add_flag(shared_input_state.ta, LV_OBJ_FLAG_HIDDEN);
 
   // Create shared keyboard
@@ -282,8 +262,10 @@ void renderTimerSettingsMenu()
   lv_obj_add_event_cb(shared_input_state.ta, timer_shared_ta_event_cb, LV_EVENT_ALL, &shared_input_state);
 
   // Add event callback to Set Round Time button (only if countdown mode)
-  if (is_countdown) {
-    lv_obj_add_event_cb(btn_set_time, [](lv_event_t *e) {
+  if (is_countdown)
+  {
+    lv_obj_add_event_cb(btn_set_time, [](lv_event_t *e)
+                        {
       // Show the shared input system
       lv_obj_clear_flag(shared_input_state.ta, LV_OBJ_FLAG_HIDDEN);
       lv_obj_clear_flag(shared_input_state.kb, LV_OBJ_FLAG_HIDDEN);
@@ -295,8 +277,7 @@ void renderTimerSettingsMenu()
       snprintf(buf, sizeof(buf), "%d", get_round_time() / 60);
       lv_textarea_set_text(shared_input_state.ta, buf);
       shared_input_state.current_var = &round_time_var;
-      shared_input_state.current_label = lbl_set_time;
-    }, LV_EVENT_CLICKED, NULL);
+      shared_input_state.current_label = lbl_set_time; }, LV_EVENT_CLICKED, NULL);
   }
 }
 

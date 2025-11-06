@@ -47,7 +47,8 @@ enum MenuState
   MENU_AUDIO_SETTINGS,   // NEW: Audio Settings Submenu
   MENU_TIMER_SETTINGS,   // NEW: Timer Settings Submenu
   MENU_POWER_SETTINGS,   // NEW: Power Settings Submenu
-  MENU_THEME_SETTINGS    // NEW: Theme Settings Submenu
+  MENU_THEME_SETTINGS,   // NEW: Theme Settings Submenu
+  MENU_TOUCH_SETTINGS    // NEW: Touch Settings Submenu
 };
 
 enum ContextualQuadrant
@@ -68,21 +69,19 @@ enum ContextualQuadrant
 #define BLACK_COLOR lv_color_hex(0x000000)
 #define GRAY_COLOR lv_color_hex(0x808080)
 #define DARK_GRAY_COLOR lv_color_hex(0x404040)
-#define AMP_START_COLOR YELLOW_COLOR
-#define AMP_END_COLOR RED_COLOR
 
 // Constants for StateStore
 #define PLAYER_STORE "player_store"
 #define KEY_LIFE_MAX "life"
 #define KEY_PLAYER_MODE "player_mode"
 #define KEY_BRIGHTNESS "brightness"
-#define KEY_AMP_MODE "amp_mode"
 #define KEY_LIFE_STEP_SMALL "life_step_small"
 #define KEY_LIFE_STEP_LARGE "life_step_large"
 #define KEY_SHOW_TIMER "show_timer"
-#define KEY_SWIPE_TO_CLOSE "swipe_close"  // NEW
-#define KEY_THEME_MODE "theme_mode"       // NEW: Theme Mode (0=OFF, 1=Automatic, 2=Manual)
-#define KEY_THEME_SELECTION "theme_sel"   // NEW: Theme Selection (0=Default, 1=Yugioh, 2=Magic, 3=Pokemon)
+#define KEY_SWIPE_TO_CLOSE "swipe_close"     // Swipe to dismiss menus/overlays
+#define KEY_GESTURE_MODE "gesture_mode"      // Gesture control mode (0=Classic, 1=Long Press)
+#define KEY_THEME_MODE "theme_mode"          // Theme Mode (0=OFF, 1=Automatic, 2=Manual)
+#define KEY_THEME_SELECTION "theme_sel"      // Theme Selection (0=Default, 1=Yugioh, 2=Magic, 3=Pokemon)
 
 // Custom Preset Theme NVS Keys
 #define KEY_PRESET_7_THEME "preset_7_theme"  // Custom 8 theme
@@ -124,5 +123,6 @@ enum ThemeSelection
   THEME_YUGIOH = 1,     // Gold theme
   THEME_MAGIC = 2,      // Purple theme (MTG)
   THEME_POKEMON = 3,    // Red theme
-  THEME_DEFAULT = 4     // Blue theme with logo background
+  THEME_DEFAULT = 4,    // Blue theme with logo background
+  THEME_FAB = 5         // Dark red theme (Flesh & Blood)
 };

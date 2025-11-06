@@ -37,6 +37,11 @@
 #include "data/themes.h"
 
 // ============================================
+// Config
+// ============================================
+#include "config.h"
+
+// ============================================
 // Hardware/Storage
 // ============================================
 #include <ArduinoNvs.h>
@@ -549,16 +554,23 @@ static void arc_sweep_anim_ready_cb(lv_anim_t *a)
                             { increment_life(PLAYER_TWO, step_size_t::STEP_SIZE_LARGE); });
   register_gesture_callback(GestureType::LongPressBottomRight, []()
                             { decrement_life(PLAYER_TWO, step_size_t::STEP_SIZE_LARGE); });
-  register_gesture_callback(GestureType::SwipeDown, []()
-                            { if(getCurrentMenu() == MENU_NONE)
-                                renderMenu(MENU_CONTEXTUAL); });
-  
-  // NEW: Long-Press Center for Menu
-  register_gesture_callback(GestureType::LongPressCenter, []() {
-      if (getCurrentMenu() == MENU_NONE) {
-          renderMenu(MENU_CONTEXTUAL);
-      }
-  });
+
+  // Get gesture mode from NVS
+  int gesture_mode = player_store.getInt(KEY_GESTURE_MODE, GESTURE_CONTROL_MODE);
+
+  if (gesture_mode == 0) {
+    // Classic Mode: Long press center opens menu
+    register_gesture_callback(GestureType::LongPressCenter, []() {
+        if (getCurrentMenu() == MENU_NONE) {
+            renderMenu(MENU_CONTEXTUAL);
+        }
+    });
+  } else {
+    // Long Press Mode: Swipe down opens menu
+    register_gesture_callback(GestureType::SwipeDown, []()
+                              { if(getCurrentMenu() == MENU_NONE)
+                                  renderMenu(MENU_CONTEXTUAL); });
+  }
 }
 
 // Player 1: arc grows clockwise from 90° to 270°

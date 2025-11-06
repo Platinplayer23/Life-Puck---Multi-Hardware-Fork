@@ -48,11 +48,14 @@ void SimpleCounters::shutdown() {
 
 void SimpleCounters::enable_counter(int slot) {
     if (slot < 0 || slot >= SIMPLE_COUNTER_COUNT) return;
-    
+
     counters[slot].enabled = true;
     save_to_nvs(slot);
-    
-    // DO NOT create UI here - only in create_all_enabled_ui()
+
+    // Create UI immediately if not already created
+    if (counters[slot].container == nullptr) {
+        create_counter_ui(slot);
+    }
 }
 
 void SimpleCounters::disable_counter(int slot) {
