@@ -106,16 +106,97 @@ This fork supports **two** Waveshare ESP32-S3 display variants:
 Pre-configured settings for popular games:
 - **MTG Standard** - 20 life, ±1/±5 steps
 - **MTG Commander (EDH)** - 40 life, ±1/±10 steps
-- **Pokémon TCG** - 60 life, ±10/±30 steps (Prize cards)
+- **Pokémon TCG** - 60 life, ±10/±30 steps
 - **Yu-Gi-Oh!** - 8000 LP, ±50/±500 steps
-- **Custom 5-10** - Customizable presets (default: 20 life, ±1/±5)
+- **Flesh and Blood** - 40 life, ±1/±5 steps
+- **Lorcana** - 20 lore, ±1/±5 steps
+- **One Piece** - 5 life, ±1/±2 steps
+- **Custom Slots 8-10** - Fully customizable
+
+#### 📊 Simple Counters System
+**New Feature**: 4 configurable auxiliary counters for tracking additional game metrics:
+
+**Counter Features:**
+- **4 Corner Positions**: Top-Left, Top-Right, Bottom-Left, Bottom-Right
+- **Individual Enable/Disable**: Each counter can be turned on/off independently
+- **Touch Interaction**: 
+  - **Short Tap**: Increment by 1
+  - **Medium Hold**: Decrement by 1
+  - **Long Hold**: Reset to 0
+- **Visual Feedback**: Color changes during press (yellow for decrement, red for reset)
+- **Theme Integration**: Counters adapt to selected theme colors
+
+
+**Configuration:**
+- **Settings → Counters**: Enable/disable individual counters
+- **Centralized Settings**: All counter parameters configurable in `config.h`
+- **Positioning**: Adjustable X/Y coordinates for each corner
+- **Visual Settings**: Size, opacity, colors, and timing thresholds
+- **Reset Integration**: Counters reset when main life counter is reset
+
+**Common Uses:**
+- **MTG**: Commander damage, poison counters, storm count, energy counters
+- **Pokémon**: Energy counters, damage counters, special conditions
+- **Yu-Gi-Oh!**: Life Point modifiers, special counters
+- **General**: Any auxiliary tracking needed during gameplay
+
 
 #### ✏️ Preset Editor
 - Create custom game configurations
-- Set starting life, step size, and timer defaults
+- Set starting life, step size, and theme
 - Name your presets (up to 15 characters)
 - Save to non-volatile storage
 - Quick-select from game menu
+
+#### 🔊 Audio Settings
+**Dedicated Audio submenu with:**
+- **Audio Toggle**: Enable/disable all sounds
+- **Volume Control**: 0-100% (displayed as percentage, 9 internal steps)
+- **Sound Selection**: Choose from 4 distinct alert sounds
+- Visual feedback with grayed-out disabled states
+
+**Sound Options:**
+1. **Sound 1**: Standard beep
+2. **Sound 2**: High-pitched tone
+3. **Sound 3**: Melodic chime
+4. **Sound 4**: Low buzz
+
+### Power Management Features
+
+#### 🔋 Power Settings Submenu
+Comprehensive power management in a dedicated submenu:
+
+**Brightness Control:**
+- Manual adjustment (0-100%)
+
+**Auto-Dim:**
+- Automatically reduces brightness to 25% after inactivity
+- Default: 60 seconds
+- Configurable timeout (0 = disabled)
+- Restores full brightness on touch
+
+**Display Sleep:**
+- Turns off display completely after extended inactivity
+- Default: 300 seconds (5 minutes)
+- Configurable timeout (0 = disabled)
+- Wakes on touch
+
+**Low Battery Dimming:**
+- Activates automatically at ≤15% battery
+- Forces display to 5% brightness
+- Prevents dimming when USB charging detected 
+- Automatically restores brightness when battery > 15%
+- Works independently from auto-dim and sleep
+
+**Critical Battery Protection:**
+- **Automatic deep sleep at ≤2% battery**
+- **Smart USB detection:**
+  - Voltage < 1V → USB charging detected, no shutdown
+  - 30-second timeout for switch toggling protection
+  - 10-second boot grace period for voltage stabilization
+- **Prevents battery damage from deep discharge**
+- **Protects against false triggers during charging**
+
 
 ### User Interface
 - **LVGL-based UI**: Hardware-accelerated animations
@@ -130,6 +211,9 @@ Pre-configured settings for popular games:
 - **History Tracking**: Persistent life change log until Reset
 - **Undo/Redo Support**: Step back through life changes
 - **Session Recovery**: Resume game state after restart
+
+### Swipe Close (Swipe)
+- **when activated**: All Lists an Settings menus can be closed by swiping from left to right 
 
 ---
 
@@ -208,213 +292,225 @@ Just switch between the Project Environments
 
 ## 🎯 Touch Calibration
 
-If touch inputs are misaligned or unresponsive, adjust the calibration in `src/LVGL_Driver.cpp`.
+The device features an advanced **3-Round Calibration System** that provides superior touch accuracy through multiple refinement passes.
 
-### Adjusting Touch Scaling
+### What is the 3-Round Calibration System?
 
-Edit the `Lvgl_Touchpad_Read` function in `src/LVGL_Driver.cpp`:
+Because of Problems with a standard 5 Point calibration, caused by an unknown transformation I implemented my own approach:
 
-void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data) {  
-Touch_Read_Data();  
-if (touch_data.points != 0) {  
-// TOUCH SCALING CORRECTION  
-float scale_x = 0.85f; // Adjust: try 0.90, 0.95, 1.0, 1.05  
-float scale_y = 1.0f; // Adjust: try 0.90, 0.95, 1.0, 1.05  
+- ❌ **No** complex multi-point sampling
+- ❌ **No** pixel-perfect alignment required
 
-text
-    int center_x = LCD_WIDTH / 2;
-    int center_y = LCD_HEIGHT / 2;
-    
-    // Scale touch coordinates from center
-    int dx = touch_data.x - center_x;
-    int dy = touch_data.y - center_y;
-    
-    int corrected_x = center_x + (int)(dx * scale_x);
-    int corrected_y = center_y + (int)(dy * scale_y);
-    
-    // Clamp to screen bounds
-    if (corrected_x < 0) corrected_x = 0;
-    if (corrected_y < 0) corrected_y = 0;
-    if (corrected_x >= LCD_WIDTH) corrected_x = LCD_WIDTH - 1;
-    if (corrected_y >= LCD_HEIGHT) corrected_y = LCD_HEIGHT - 1;
-    
-    data->point.x = corrected_x;
-    data->point.y = corrected_y;
-    data->state = LV_INDEV_STATE_PRESSED;
-} else {
-    data->state = LV_INDEV_STATE_RELEASED;
-}
+Instead:
+- ✅ **Fully automatic** - System knows if you're left/right/up/down
+- ✅ **Zone-based detection** - Touch target, system auto-corrects
+- ✅ **Real-time convergence** - Parameters adjust while you touch
+- ✅ **3-round refinement** - Progressive accuracy improvement
+- ✅ **13 total steps** - Complete calibration with multiple passes
+- ✅ **Fallback system** - Confirmation dialog with auto-revert
 
-touch_data.points = 0;
-touch_data.gesture = NONE;
+📖 **[Read full documentation](docs/Suthes_Method_Touch_Calibration.md)**
 
-}
+### On-Device Calibration (Recommended)
 
-text
+#### How the 3-Round System Works
 
-### Calibration Values
+**Round 1: Full Calibration (5 steps)**
+1. **Offset X** - Touch red dot in center, system auto-adjusts horizontal offset
+2. **Offset Y** - Touch red dot in center, system auto-adjusts vertical offset  
+3. **Rotation** - Touch red dot on vertical line, system auto-adjusts rotation
+4. **Scale X** - Touch red dot on right edge, system auto-adjusts horizontal scale
+5. **Scale Y** - Touch red dot on bottom edge, system auto-adjusts vertical scale
 
-**scale_x / scale_y:**
-- `< 1.0`: Touch area shrinks toward center (fixes edge overshooting)
-- `= 1.0`: No scaling (1:1 mapping)
-- `> 1.0`: Touch area expands (fixes not reaching edges)
+**Round 2: Refinement (5 steps)**
+- **Refine Offset X** - Ultra-fine horizontal adjustment
+- **Refine Offset Y** - Ultra-fine vertical adjustment
+- **Refine Rotation** - Ultra-fine angle adjustment
+- **Refine Scale X** - Ultra-fine horizontal scale
+- **Refine Scale Y** - Ultra-fine vertical scale
 
-**Common Issues:**
+**Round 3: Final Offset (2 steps)**
+- **Final Offset X** - Ultimate horizontal precision
+- **Final Offset Y** - Ultimate vertical precision
 
-| Problem | Solution | Example Value |
-|---------|----------|---------------|
-| Touch overshoots edges | Reduce scale | `scale_x = 0.85f` |
-| Can't reach edges | Increase scale | `scale_x = 1.05f` |
-| Left/right offset | Adjust X scale only | `scale_x = 0.90f` |
-| Up/down offset | Adjust Y scale only | `scale_y = 1.02f` |
+**Summary Step**
+- **Calibration complete!** - Touch to exit and return to settings
 
-### Testing Touch Calibration
+#### Step-by-Step Guide
+
+1. **Access Calibration:**
+   - Go to **Settings → Touch Calibration**
+   - Read on-screen instructions
+
+2. **Follow the 3-Round Process:**
+   - **Round 1**: Complete calibration (5 steps, each with Coarse → Fine)
+   - **Round 2**: Refinement of all parameters (5 ultra-fine steps)
+   - **Round 3**: Final offset adjustment (2 maximum precision steps)
+   - **Just touch and hold** the red dot or line as shown
+   - System adjusts parameters **automatically**
+   - Release when text says "OK! Release finger"
+
+3. **Confirmation:**
+   - Calibration is **immediately applied** for testing
+   - On next boot, a **confirmation dialog** appears
+   - Choose **Keep** or **Revert** (10-second auto-revert if no action)
+   - Once confirmed, calibration is permanent
+
+#### 🎯 How the 3-Round System Works
+
+The 3-Round Calibration System uses **progressive refinement** to achieve optimal accuracy:
+
+```
+Round 1: Full Calibration (Coarse → Fine)
+┌─────────────────────────────────────────┐
+│ Step 1: Offset X    (Coarse → Fine)    │
+│ Step 2: Offset Y    (Coarse → Fine)    │
+│ Step 3: Rotation    (Coarse → Fine)    │
+│ Step 4: Scale X     (Coarse → Fine)    │
+│ Step 5: Scale Y     (Coarse → Fine)    │
+└─────────────────────────────────────────┘
+
+Round 2: Refinement (Ultra-Fine)
+┌─────────────────────────────────────────┐
+│ Step 6:  Refine Offset X  (Ultra-Fine) │
+│ Step 7:  Refine Offset Y  (Ultra-Fine) │
+│ Step 8:  Refine Rotation  (Ultra-Fine) │
+│ Step 9:  Refine Scale X   (Ultra-Fine) │
+│ Step 10: Refine Scale Y   (Ultra-Fine) │
+└─────────────────────────────────────────┘
+
+Round 3: Final Offset (Maximum Precision)
+┌─────────────────────────────────────────┐
+│ Step 11: Final Offset X (Max Precision)│
+│ Step 12: Final Offset Y (Max Precision)│
+└─────────────────────────────────────────┘
+```
+
+**The 3-round calibration process:**
+1. **Round 1**: Establishes baseline calibration with coarse + fine passes
+2. **Round 2**: Refines all parameters with ultra-fine adjustments
+3. **Round 3**: Achieves maximum precision with final offset adjustments
+4. **Progressive accuracy**: Each round builds upon the previous for optimal results
+5. **Origin Correction**: A hardcoded origin correction is added to compensate standard origin offset
+
+This creates a **multi-pass refinement system** that guarantees superior calibration accuracy!
+
+#### Testing Calibration
 
 **Best method:** Use the **Preset Editor** keyboard
 
 1. Go to **Settings → Edit Presets**
-2. Tap on any Preset
-3. The on-screen keyboard appears
-4. Test tapping different keys (especially corners and edges)
-5. If keys are unresponsive or wrong keys register, adjust scaling
-6. Rebuild and re-upload firmware
-7. Repeat until keyboard feels accurate
+2. Select any preset
+3. Try typing on the on-screen keyboard
+4. Test all screen regions (center, edges, corners)
+5. If touch feels off → Just re-run calibration (takes 45-65 seconds for full 3-round process!)
 
 **Why the keyboard?**
-- Has buttons in all screen regions (center, edges, corners)
-- Provides immediate visual feedback
-- Small keys reveal misalignment quickly
-- Most challenging UI element to use
+- Small keys in all screen regions
+- Immediate visual feedback
+- Most challenging UI element - if keyboard works, everything works!
 
-### Step-by-Step Calibration Process
+**Calibration Timing:**
+- **Round 1**: 20-30 seconds (5 steps × 4-6 seconds each)
+- **Round 2**: 15-25 seconds (5 refinement steps × 3-5 seconds each)  
+- **Round 3**: 6-10 seconds (2 final offset steps × 3-5 seconds each)
+- **Total**: 45-65 seconds for complete 3-round calibration
 
-1. **Test current calibration:**
+### Factory Reset to Defaults
 
-pio run -t upload && pio device monitor
+If your device becomes unusable due to bad calibration, you can reset to factory defaults:
 
+#### Option 1: Via Settings (if touch still works)
+1. Go to **Settings → Touch Calibration**
+2. The calibration will use factory defaults during the process
+3. Complete the 3-round calibration process (13 steps total)
 
-2. **Open Preset Editor keyboard:**
-- Navigate: Main Screen → Settings → Edit Presets → Add Preset
-- Try typing on the keyboard
+#### Option 2: Emergency Code Reset
+If touch is completely broken:
 
-3. **Identify the problem:**
-- **Buttons don't respond:** Increase scale (e.g., `1.05f`)
-- **Wrong buttons activate:** Decrease scale (e.g., `0.90f`)
-- **Only X-axis wrong:** Adjust `scale_x` only
-- **Only Y-axis wrong:** Adjust `scale_y` only
+1. Open `src/main.cpp` around line 125
+2. **Uncomment** the emergency reset line:
+   ```cpp
+   // === NOTFALL: Touch Calibration Reset ===
+   resetTouchCalibrationToDefaults();  // ← Remove the //
+   ```
+3. Flash to device
+4. **Re-comment** the line and flash again
 
-4. **Adjust values in `LVGL_Driver.cpp`:**
+### Manual Default Adjustment (Advanced)
 
-float scale_x = 0.85f; // Your adjusted value
-float scale_y = 1.0f; // Your adjusted value
+To change factory default values, edit **`src/hardware/display/lvgl_driver.cpp`** line 27-34:
 
+```cpp
+static const float DEFAULT_CAL_MATRIX[7] = {
+    0.0f,    // [0] offset_x
+    0.85f,   // [1] scale_x - Try 0.80-1.05
+    0.0f,    // [2] shear_xy - Usually 0.0
+    0.0f,    // [3] offset_y
+    0.0f,    // [4] shear_yx - Usually 0.0
+    1.0f,    // [5] scale_y - Try 0.80-1.05
+    1.0f     // [6] divisor - Leave at 1.0
+};
+```
 
-5. **Rebuild and test:**
+**Tested Defaults:**
+ are saved in the Config.h
 
-pio run -t upload
-
-
-6. **Repeat** until keyboard works reliably
-
-### Example Calibration Values
-
-**ESP32-S3-Touch-LCD-1.85C:**
-
-float scale_x = 0.85f; // Tested working value
-float scale_y = 1.0f;
-
-
-**ESP32-S3-Touch-LCD-1.85:**
-
-float scale_x = 1.0f; // May vary per device
-float scale_y = 1.0f;
-
-
-> **Note:** These values may vary between individual displays. Always test on your specific hardware.
-
-### Alternative: Runtime Calibration (Future Feature)
-
-On-device calibration UI will be added in a future update. For now, compile-time calibration is the recommended method.
+> **Recommendation:** Use the automatic 3-round calibration instead of manual adjustment. It provides optimal, device-specific calibration in 45-65 seconds with superior accuracy through progressive refinement!
 
 ---
 
 ## ⚙️ Adding Custom Presets
-You can change the presets via the on-device Menu  
-But the on-device keyboard can be difficult to use. Instead you can, add custom game presets before compilation.
+
+You can edit presets on-device via **Settings → Edit Presets**, but the keyboard can be challenging to use. For easier customization, edit presets before compilation.
 
 ### Step 1: Locate Preset File
 
-Edit the preset initialization function in **`src/tcg_presets.cpp`**:
-
+Edit **`src/data/tcg_presets.cpp`**
 
 ### Step 2: Add Your Custom Game
 
-**Example: Custom Slot**
+**Example: Customizing Slot 8**
 
-Just fill in the Game Data:
+```cpp
+// ---- SLOT 8: Custom ----
+strncpy(TCG_PRESETS[7].name, "Vanguard", sizeof(TCG_PRESETS[7].name) - 1);
+TCG_PRESETS[7].starting_life = 5;
+TCG_PRESETS[7].small_step = 1;
+TCG_PRESETS[7].large_step = 2;
+```
 
-    // ---- SLOT 7: Custom ----
-    strncpy(TCG_PRESETS[7].name, "Custom 8", sizeof(TCG_PRESETS[7].name) - 1);
-    TCG_PRESETS[7].starting_life = 20;
-    TCG_PRESETS[7].small_step = 1;
-    TCG_PRESETS[7].large_step = 5;
-
-
-First Line is just the Name as a comment keep the //  
-Second Line replace "Custom 8" with "Name of Your Game"  
-And for the Rest just change the numbers according to your needs
-### Preset Format
-
-TCG_PRESETS[index].name // Display name (max 15 characters)  
-TCG_PRESETS[index].starting_life // Initial life total (1-999999)  
-TCG_PRESETS[index].small_step // Small increment (tap)  
-TCG_PRESETS[index].large_step // Large increment (swipe)  
-
+**Field Explanation:**
+- `name`: Display name (max 15 characters)
+- `starting_life`: Initial life total (1-9999)
+- `small_step`: Small increment (tap)
+- `large_step`: Large increment (swipe)
 
 ### Common TCG Presets
 
-
-
 **Cardfight!! Vanguard:**
-
-strncpy(TCG_PRESETS.name, "Vanguard", sizeof(TCG_PRESETS.name) - 1);  
-TCG_PRESETS.starting_life = 5;  
-TCG_PRESETS.small_step = 1;​  
-TCG_PRESETS.large_step = 2;  
-
-
+```cpp
+strncpy(TCG_PRESETS[7].name, "Vanguard", sizeof(TCG_PRESETS[7].name) - 1);
+TCG_PRESETS[7].starting_life = 5;
+TCG_PRESETS[7].small_step = 1;
+TCG_PRESETS[7].large_step = 2;
+```
 
 **Digimon Card Game:**
-
-strncpy(TCG_PRESETS.name, "Digimon", sizeof(TCG_PRESETS.name) - 1);  
-TCG_PRESETS.starting_life = 5; // Security cards​  
-TCG_PRESETS.small_step = 1;​  
-TCG_PRESETS.large_step = 2;  
-
-
+```cpp
+strncpy(TCG_PRESETS[8].name, "Digimon", sizeof(TCG_PRESETS[8].name) - 1);
+TCG_PRESETS[8].starting_life = 5;  // Security cards
+TCG_PRESETS[8].small_step = 1;
+TCG_PRESETS[8].large_step = 2;
+```
 
 **Star Wars Unlimited:**
-
-strncpy(TCG_PRESETS.name, "Star Wars", sizeof(TCG_PRESETS.name) - 1);  
-TCG_PRESETS.starting_life = 30;​  
-TCG_PRESETS.small_step = 1;​  
-TCG_PRESETS.large_step = 5;  
-
-​
-
-### Step 3: Rebuild and Upload
-
-1. Save the file (`src/tcg_presets.cpp`)
-2. Run **PlatformIO: Upload**
-3. Your custom presets will appear in the game selection menu
-
-### Notes
-
-- Maximum 10 presets (indices 0-9)
-- First 7 slots are pre configurde with default games
-- Every Slot can be changed
-- Preset names are limited to 15 characters
-- Changes require recompiling and re-uploading firmware except using the on-board menu
+```cpp
+strncpy(TCG_PRESETS[9].name, "Star Wars", sizeof(TCG_PRESETS[9].name) - 1);
+TCG_PRESETS[9].starting_life = 30;
+TCG_PRESETS[9].small_step = 1;
+TCG_PRESETS[9].large_step = 5;
+```
 
 ---
 
@@ -424,90 +520,252 @@ TCG_PRESETS.large_step = 5;
 
 #### Main Screen (Single Player)
 
+**Life Adjustment:**
 - **Tap Top Half:** Increase life by small step
 - **Tap Bottom Half:** Decrease life by small step
 - **Swipe Bottom to Top:** Increase by large step
 - **Swipe Top to Bottom:** Decrease by large step
-- **Long press Middle:** Open tools menu (dice, coin, timer)
-- **Click Gear in tools menu:** Open settings menu
-- **Tap Timer:** Start/pause timer
-- **Long Press Timer:** Reset timer
+
+**Menu Access:**
+- **Long press Center:** Open contextual menu
+- **Swipe Right:** Previous page in contextual menu
+- **Swipe Left:** Next page in contextual menu
+
+**Timer:**
+- **Tap Timer:** Start/pause
+- **Long Press Timer:** Reset
+
+**Simple Counters (if enabled):**
+- **Tap Counter:** Increment by 1
+- **Long Press Counter 0.5s:** Decrement by 1
+- **Long Press Counter 1.5s:** Reset Counter
 
 #### Main Screen (Two Player)
 
-- **Tap Your Side:** Adjust your life total
-- **Swipe Your Side:** Large adjustment
-- **Long press Middle:** Open menus
-- **Tap Timer:** Start/pause timer
+**Life Adjustment:**
+- **Tap Your Half:** Small adjustment
+- **Swipe Your Half:** Large adjustment
 
-#### Tools Menu
+**Menu Access:**
+- **Long press Center:** Open contextual menu
 
-- **⚙️ Settings Icon:** Settings Menu
-- **1P/2P:** Switch 1 and 2 Player Mode
-- **🔄 Reset Icon:** Reset game
-- **Presets:** Select Presets
-#### Second Page via Swipe
-- **🎲 Dice Icon:** Open dice roller menu
-- **🪙 Coin Icon:** Start coin flip
-- **⏱️ Timer Icon:** Timer settings
+**Timer:**
+- **Tap Timer:** Start/pause
+- **Long Press Timer:** Reset
+
+### Menu Navigation
+
+#### Contextual Menu (Page 1)
+
+- **⚙️ Settings Icon:** Open settings menu
+- **1P/2P Toggle:** Switch between one and two player modes
+- **🔄 Reset Icon:** Reset all life counters to starting values
+- **📋 Presets Icon:** Quick-select game presets
+
+#### Contextual Menu (Page 2)
+
+- **🎲 Dice Icon (D):** Open dice selection menu
+- **🪙 Coin Icon (C):** Instant coin flip
+- **History:** Open the History
 
 #### Settings Menu
 
-- **Start Life:** Adjust Life and Increments for this Session
-- **Brightness:** Adjust display brightness (0-100%)
-- **Amp:** Enable/disable auxiliary counter (tracks Commander Damage, Poison, Storm, etc.)
-- **Swipe On:** Enable/disable swipe-to-dismiss for popup menus and lists
-- **Timer On:** Show/hide timer on main screen
-- **Timer Mode:** Stopwatch or Countdown
-- **Round Time:** Set countdown duration (countdown mode only)
-- **Preset Editor:** Edit game presets
+**Main Settings:**
+- **Start Life:** Adjust starting life and step sizes for current session
+- **Power Settings →** Power management submenu
+- **Audio Settings →** Sound configuration submenu
+- **Timer Settings →** Timer mode and round time submenu
+- **Counters →** Simple counters configuration submenu
+- **Edit Presets:** Customize game presets
+- **Touch Calibration:** On-device touch calibration
+- **Swipe to Close:** Enable/disable swipe gestures for menus
+- **Restart:** Reboot device
+- **Battery Display:** Real-time battery percentage and icon
+
+**Power Settings Submenu:**
+1. **Brightness:** Adjust display brightness (0-100%)
+2. **Auto-Dim:** Auto-dim after inactivity (ON/OFF, configurable timeout)
+3. **Sleep:** Display sleep after inactivity (ON/OFF, configurable timeout)
+4. **Low Battery Dimming:** Automatic dimming at ≤15% battery (ON/OFF)
+
+**Audio Settings Submenu:**
+1. **Audio:** Master audio toggle (ON/OFF)
+2. **Volume:** Adjust volume (0-100%)
+3. **Sound:** Select alert sound (4 options) used by Countdown Timer
+
+**Timer Settings Submenu:**
+1. **Timer:** Show/hide timer on main screen (ON/OFF)
+2. **Timer Mode:** Stopwatch or Countdown
+3. **Round Time:** Set countdown duration (1-999 minutes, Countdown mode only)
+
+**Counters Settings Submenu:**
+1. **Top-Left Counter:** Enable/disable counter in top-left corner
+2. **Top-Right Counter:** Enable/disable counter in top-right corner
+3. **Bottom-Left Counter:** Enable/disable counter in bottom-left corner
+4. **Bottom-Right Counter:** Enable/disable counter in bottom-right corner
 
 ### Advanced Features
 
 #### Using the Dice Roller
 
-1. **Open Tools Menu**: Hold in the Middle and swipe left
-2. **Select Dice Icon**: Tap the W6 symbol
-3. **Choose Dice Type**: Select D4, D6, D8, D10, D12, or D20
-4. **View Result**: Displays final number
-
+1. **Open Contextual Menu**: Long press center of screen
+2. **Navigate to Page 2**: Swipe left
+3. **Select Dice Icon**: Tap the "D" symbol
+4. **Choose Dice Type**: Select D4, D6, D8, D10, D12, D20, or D100
+5. **View Result**: Number displayed
+6. **Close**: Tap outside or swipe right (if enabled)
 
 #### Using the Coin Flip
 
-1. **Open Tools Menu**: Hold in the Middle and swipe left
-2. **Select Coin Icon**: Tap the 🪙 coin symbol
-3. **Result**: Result will be shown directly
-
+1. **Open Contextual Menu**: Long press center
+2. **Navigate to Page 2**: Swipe left
+3. **Select Coin Icon**: Tap the "C" symbol
+4. **View Result**: Heads or Tails displayed
 
 #### Configuring Timer Modes
 
 **Stopwatch Mode:**
-1. Settings → Timer Mode → Stopwatch
+1. Settings → Timer Settings → Timer Mode → Stopwatch
 2. Timer counts up from 00:00
-3. Track total game duration
+3. Tracks total game duration
 4. No time limit
 
 **Countdown Mode:**
-1. Settings → Timer Mode → Countdown
-2. Settings → Round Time → Set duration (1-999 minutes)
+1. Settings → Timer Settings → Timer Mode → Countdown
+2. Settings → Timer Settings → Round Time → Enter duration (1-999 minutes)
 3. Timer counts down to 00:00
-6. Audialert when time expires in future update
+4. Audio alert when time expires
+5. Automatic pause at 00:00
+
+#### Using the Simple Counters System
+
+The Simple Counters system provides 4 configurable auxiliary counters for tracking additional game metrics:
+
+**Enable Counters:**
+1. Settings → Counters → Enable desired counters (Top-Left, Top-Right, Bottom-Left, Bottom-Right)
+2. Counters appear in their respective corners
+
+**Usage:**
+- **Short Tap:** Increment by 1
+- **Medium Hold (0.5-1.5s):** Decrement by 1 (visual feedback: yellow text)
+- **Long Hold (>1.5s):** Reset to 0 (visual feedback: red text)
+- **Theme Integration:** Counters adapt to selected theme colors
+- **Semi-Transparent:** 80% opacity with gradient effects for better integration
+
+**Common Uses:**
+- **MTG**: Commander damage, poison counters, storm count, energy counters
+- **Pokémon**: Energy counters, damage counters, special conditions
+- **Yu-Gi-Oh!**: Life Point modifiers, special counters
+- **General**: Any auxiliary tracking needed during gameplay
+
+**Configuration:**
+- All counter settings are centralized in `config.h`
+- Adjustable positioning, size, opacity, colors, and timing
+- Counters reset automatically when main life counter is reset
 
 #### Editing Custom Presets
 
 **Using Preset Editor (On-Device):**
 1. Settings → Edit Presets
-2. Tap any Custom Preset
-3. Enter preset name (max 15 characters)
-4. Set starting life
+2. Select any preset (Custom 8, Custom 9, Custom 10 recommended)
+3. Enter preset name (max 15 characters, on-screen keyboard)
+4. Set starting life (1-9999)
 5. Set small step (tap increment)
-6. Set large step (Swipe increment)
-7. Save preset
+6. Set large step (swipe increment)
+7. Save preset (automatically saved to NVS)
 
 **Adding Presets Before Compilation** (Recommended):
 
-See [Adding Custom Presets](#-adding-custom-presets) section for details on editing the preset file before building.
+See [Adding Custom Presets](#-adding-custom-presets) section for editing `tcg_presets.cpp` before building.
 
+#### Power Management Tips
+
+**Extend Battery Life:**
+1. Enable Auto-Dim (Settings → Power Settings → Auto-Dim → ON)
+2. Enable Sleep (Settings → Power Settings → Sleep → ON)
+3. Reduce brightness (Settings → Power Settings → Brightness → 30-50%)
+
+
+**Battery Protection:**
+- Low Battery Dimming activates automatically at ≤15%
+- Wake device by pressing power button
+- Critical Battery Protection triggers at ≤2%
+- Device enters deep sleep to prevent battery damage
+
+
+**Charging:**
+- Connect USB-C cable
+- Device can operate while charging
+- Low Battery Dimming disabled during charging 
+- Battery percentage may show 0% while charging (normal behavior)
+
+---
+
+## 🔋 Power Management
+
+### Overview
+
+The Life Puck includes comprehensive power management to extend battery life and protect the battery from damage.
+
+### Features
+
+#### Auto-Dim
+- **Function:** Reduces display to 25% brightness after inactivity
+- **Default:** 60 seconds
+- **Configuration:** Power Settings → Auto-Dim
+- **Benefits:** Extends battery life during pauses in gameplay
+
+#### Display Sleep
+- **Function:** Turns off display completely after extended inactivity
+- **Default:** 300 seconds (5 minutes)
+- **Configuration:** Power Settings → Sleep
+- **Wake:** Touch screen anywhere
+
+#### Low Battery Dimming
+- **Function:** Forces display to 5% brightness at ≤15% battery
+- **Automatic:** Activates when battery drops to critical levels
+- **Restoration:** Automatically restores brightness when battery > 15%
+- **USB Detection:** Disabled when charging (voltage < 1V)
+- **Configuration:** Power Settings → Low Battery Dimming
+
+#### Critical Battery Protection
+
+**Purpose:** Prevents permanent battery damage from deep discharge
+
+**How It Works:**
+1. Battery drops to ≤2%
+2. 2-second verification timer starts
+3. After 2 seconds, voltage is re-checked
+4. If voltage is between 1V and 3.3V → Deep sleep activated
+5. If voltage < 1V (USB charging) or > 3.3V → Protection canceled
+
+**Smart USB Detection:**
+- Voltage < 1V → USB charging detected, no shutdown
+- 30-second timeout handles power switch toggling during USB charging
+- 10-second boot grace period allows voltage readings to stabilize
+
+**Why This Matters:**
+- The original Life Puck had no automatic battery protection
+- Without this feature, battery can drain to 2.7V, causing permanent damage
+- This system ensures battery longevity and prevents costly replacements
+
+**Wake from Deep Sleep:**
+- connect USB-C cable
+- Press and hold power button for 2 seconds (non C Model)
+
+### Best Practices
+
+**For Maximum Battery Life:**
+1. Enable Auto-Dim and Sleep
+2. Set brightness to 30-50%
+3. Enable Low Battery Dimming
+4. Charge battery before it reaches 15%
+
+**For Maximum Performance:**
+1. Set brightness to 70-100%
+2. Disable Auto-Dim
+3. Set Sleep timeout to 0 (disabled)
+4. Keep Low Battery Dimming enabled (battery protection)
 
 
 ---
