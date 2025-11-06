@@ -40,3 +40,23 @@ float battery_get_percent()
     percent = 0.0;
   return percent;
 }
+
+bool is_usb_connected(void)
+{
+  // USB-Detection für C-Modell: Wenn ESP läuft und Schalter OFF (Battery < 3.2V),
+  // dann muss USB angesteckt sein (sonst hätte ESP keine Spannung)
+  // Wenn Schalter ON (Battery >= 3.2V), können wir nicht sicher sagen, ob USB angesteckt ist,
+  // aber das ist auch nicht wichtig - der ESP sollte einfach laufen
+  float volts = battery_get_volts();
+  
+  // Wenn Batterie-Spannung < 3.2V, bedeutet das Schalter OFF
+  // Wenn ESP trotzdem läuft, muss USB angesteckt sein
+  if (volts < 3.2) {
+    return true; // Schalter OFF + ESP läuft = USB muss angesteckt sein
+  }
+  
+  // Wenn Batterie-Spannung >= 3.2V, bedeutet das Schalter ON
+  // Wir können nicht sicher sagen, ob USB angesteckt ist, aber das ist auch nicht wichtig
+  // Für die Logik: Wenn Schalter ON, sollte ESP laufen, egal ob USB angesteckt ist
+  return false; // Schalter ON - USB-Status ist nicht relevant
+}

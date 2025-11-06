@@ -28,3 +28,9 @@ float battery_get_volts(void);
  * @return Battery charge level (0.0-100.0%)
  */
 float battery_get_percent(void);
+
+/**
+ * @brief Check if USB/Netzteil is connected
+ * @return true if voltage < 1.0V (USB/Netzteil detected), false otherwise
+ */
+bool is_usb_connected(void);

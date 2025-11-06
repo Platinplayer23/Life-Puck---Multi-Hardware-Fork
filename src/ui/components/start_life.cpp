@@ -20,10 +20,6 @@
 #include "ui/screens/life/life_counter.h"
 #include "ui/screens/life/life_counter_two_player.h"
 
-// ============================================
-// UI Components
-// ============================================
-#include "ui/helpers/ui_helpers.h"
 
 extern lv_obj_t *life_config_menu;
 int max_life;
@@ -106,7 +102,7 @@ void shared_ta_event_cb(lv_event_t *e)
           lv_textarea_set_text(state->ta, buf);
         }
       }
-
+      
       *(state->current_var) = value;
       char buf[16];
       snprintf(buf, sizeof(buf), "%d", value);
@@ -137,7 +133,7 @@ void shared_ta_event_cb(lv_event_t *e)
           value = 9999;
         }
       }
-
+      
       *(state->current_var) = value;
       char buf[16];
       snprintf(buf, sizeof(buf), "%d", value);
@@ -171,15 +167,15 @@ static const lv_buttonmatrix_ctrl_t kb_ctrl[] = {
 static void handle_save()
 {
   printf("Save button clicked\n");
-
+  
   // Check if max_life changed
   int old_max_life = player_store.getInt(KEY_LIFE_MAX, DEFAULT_LIFE_MAX);
   bool max_life_changed = (old_max_life != max_life);
-
+  
   player_store.putInt(KEY_LIFE_MAX, max_life);
   player_store.putInt(KEY_LIFE_STEP_SMALL, small_step);
   player_store.putInt(KEY_LIFE_STEP_LARGE, large_step);
-
+  
   // *** RESET EVERYTHING if max_life changed ***
   // resetActiveCounter() already resets life, counters, timer, and marks saved life as invalid
   if (max_life_changed)
@@ -187,7 +183,7 @@ static void handle_save()
     resetActiveCounter();
     printf("[Start Life] Max life changed from %d to %d, resetting everything\n", old_max_life, max_life);
   }
-
+  
   // Refresh UI (resetActiveCounter already calls init if needed, but we need to refresh display)
   int player_mode = player_store.getInt(KEY_PLAYER_MODE, PLAYER_SINGLE);
   if (player_mode == PLAYER_MODE_ONE_PLAYER)
@@ -225,10 +221,18 @@ void renderLifeConfigScreen()
   lv_obj_set_layout(life_config_menu, LV_LAYOUT_GRID);
 
   // Back button
-  lv_obj_t *btn_back = ui_create_back_button(life_config_menu, 0, 1, [](lv_event_t *e)
-                                             { handle_save();
-                          renderMenu(MENU_SETTINGS); });
-  lv_obj_set_grid_cell(btn_back, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
+  lv_obj_t *btn_back = lv_btn_create(life_config_menu);
+  lv_obj_set_size(btn_back, 100, 60);
+  lv_obj_set_style_bg_color(btn_back, lv_color_white(), LV_PART_MAIN);
+  lv_obj_set_grid_cell(btn_back, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_START, 0, 1);
+  lv_obj_t *lbl_back = lv_label_create(btn_back);
+  lv_label_set_text(lbl_back, LV_SYMBOL_LEFT " Back");
+  lv_obj_set_style_text_font(lbl_back, &lv_font_montserrat_20, 0);
+  lv_obj_center(lbl_back);
+  lv_obj_set_style_text_color(lbl_back, lv_color_black(), 0);
+  lv_obj_add_event_cb(btn_back, [](lv_event_t *e)
+                      { handle_save();
+                        renderMenu(MENU_SETTINGS); }, LV_EVENT_CLICKED, NULL);
 
   // Life Max label
   lv_obj_t *lbl_life_max = lv_label_create(life_config_menu);
@@ -287,10 +291,10 @@ void renderLifeConfigScreen()
   // Create shared text area - POSITIONED HIGHER
   shared_input_state.ta = lv_textarea_create(life_config_menu);
   lv_textarea_set_one_line(shared_input_state.ta, true);
-  lv_obj_set_style_text_font(shared_input_state.ta, &lv_font_montserrat_32, 0); // Larger
+  lv_obj_set_style_text_font(shared_input_state.ta, &lv_font_montserrat_32, 0);  // Larger
   lv_obj_set_style_text_color(shared_input_state.ta, lv_color_white(), 0);
   lv_obj_set_size(shared_input_state.ta, SCREEN_WIDTH - 120, 60);
-  lv_obj_align(shared_input_state.ta, LV_ALIGN_TOP_MID, 0, 20); // Higher
+  lv_obj_align(shared_input_state.ta, LV_ALIGN_TOP_MID, 0, 20);  // Higher
   lv_obj_add_flag(shared_input_state.ta, LV_OBJ_FLAG_HIDDEN);
 
   // Create shared keyboard

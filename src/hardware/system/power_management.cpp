@@ -21,7 +21,6 @@ static int original_brightness = 50; // Default brightness (0-100)
 static unsigned long last_wake_time = 0;  // Track when display was last woken
 static const unsigned long TOUCH_IGNORE_DELAY = TOUCH_BLOCK_AFTER_WAKE_MS;
 static bool power_management_suspended = false;  // Suspend power management during calibration
-static bool ignore_next_touch_release = false;  // Flag to ignore the touch that woke the display
 
 // Critical battery shutdown tracking
 static bool low1 = false; // Track if battery is critically low
@@ -30,8 +29,6 @@ static const unsigned long CRITICAL_BATTERY_DELAY = 2000; // 2 seconds delay bef
 static const float CRITICAL_VOLTAGE_THRESHOLD = 3.3;//Voltage threshold for deep sleep (3.3
 static unsigned long boot_time = 0;
 static const unsigned long BOOT_GRACE_PERIOD = 10000; // 10 seconds grace period after boot
-static unsigned long last_usb_detected_time = 0;
-static const unsigned long USB_DETECTION_TIMEOUT = 30000; // 30 seconds - if USB was detected, assume it's still connected
 
 void power_management_init()
 {
@@ -46,21 +43,19 @@ void power_management_init()
 void power_reset_inactivity_timer()
 {
   last_activity_time = millis();
-
+  
   // Wake display if sleeping
   if (display_is_sleeping) {
     power_wake_display();
     last_wake_time = millis(); // Mark wake time to ignore touches briefly
-    ignore_next_touch_release = true;  // Ignore the touch that woke the display from sleep
   }
-
+  
   // Restore brightness if dimmed (but not if low battery dimmed)
   if (display_is_dimmed && !display_is_low_battery_dimmed) {
     original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT); // 0-100
     Set_Backlight(original_brightness);
     display_is_dimmed = false;
     last_wake_time = millis(); // Mark wake time to ignore touches briefly
-    // Don't set ignore_next_touch_release for dim - user might be actively using the device
   }
 }
 
@@ -71,27 +66,6 @@ bool power_should_ignore_touch()
     return true;
   }
   return false;
-}
-
-bool power_should_ignore_wake_touch()
-{
-  // Check if this is the touch that woke the display
-  // Also auto-clear the flag after the touch delay expires (safety mechanism)
-  if (ignore_next_touch_release) {
-    if (last_wake_time > 0 && (millis() - last_wake_time) >= TOUCH_IGNORE_DELAY) {
-      // Touch delay expired, clear the flag automatically
-      ignore_next_touch_release = false;
-      return false;
-    }
-    return true;
-  }
-  return false;
-}
-
-void power_clear_wake_touch_flag()
-{
-  // Clear the flag after the wake touch is consumed
-  ignore_next_touch_release = false;
 }
 
 void power_check_inactivity()
@@ -125,25 +99,13 @@ void power_check_inactivity()
     float battery_volts = battery_get_volts();
     int battery_percent = (int)battery_get_percent();
     
-    // Detect USB connection (voltage < 1V indicates USB charging or switch toggling)
-    if (battery_volts < 1.0) {
-      last_usb_detected_time = millis(); // Mark USB as detected
-      critical_battery_start_time = 0; // Reset shutdown timer immediately
-      
-      // If we were dimmed due to low battery, restore brightness immediately
-      if (display_is_low_battery_dimmed) {
-        original_brightness = player_store.getInt(KEY_BRIGHTNESS, BRIGHTNESS_DEFAULT);
-        Set_Backlight(original_brightness);
-        display_is_low_battery_dimmed = false;
-      }
-      // Continue with normal auto-dim logic
-    }
-    else {
-      // Check if USB was recently detected (within last 30 seconds)
-      bool usb_recently_detected = (millis() - last_usb_detected_time) < USB_DETECTION_TIMEOUT;
-      
-      // Skip critical battery shutdown during boot grace period or if USB detected
-      if (millis() - boot_time < BOOT_GRACE_PERIOD || usb_recently_detected) {
+    // USB-Detection entfernt - funktioniert nicht zuverlässig
+    // Low Battery Dimming funktioniert jetzt auch bei USB (wenn Battery < 3.2V = Schalter OFF)
+    // Wenn Battery >= 3.2V (Schalter ON), wird Low Battery Dimming normal geprüft
+    {
+      // Skip critical battery shutdown only during boot grace period
+      // USB block removed - deep sleep now works even with USB connected
+      if (millis() - boot_time < BOOT_GRACE_PERIOD) {
         low1 = false;
         critical_battery_start_time = 0;
       }
@@ -159,14 +121,14 @@ void power_check_inactivity()
         if (millis() - critical_battery_start_time >= CRITICAL_BATTERY_DELAY) {
           float current_voltage = battery_get_volts();
           
-          // Deep sleep if voltage is below 3.4V and above 1V
-          // Below 3.4V = real low battery, above 1V = not USB charging
-          if (current_voltage > 1.0 && current_voltage < CRITICAL_VOLTAGE_THRESHOLD) {
+          // Deep sleep if voltage is below 3.3V (USB check removed - works with USB too)
+          // Below 3.3V = real low battery, deep sleep to protect battery
+          if (current_voltage < CRITICAL_VOLTAGE_THRESHOLD) {
             Set_Backlight(0);
             vTaskDelay(100);
-            fall_asleep(); // Enter deep sleep to protect battery
+            fall_asleep(); // Enter deep sleep to protect battery (works with USB too)
           } else {
-            // Voltage out of range - reset (USB was connected or battery recovered)
+            // Voltage above threshold - reset (battery recovered)
             low1 = false;
             critical_battery_start_time = 0;
           }
