@@ -34,7 +34,7 @@ temp/
 
 # Project-specific excludes
 crop_logo.py
-default_16MB.csv
+
 demo/
 *.png
 *.docx
