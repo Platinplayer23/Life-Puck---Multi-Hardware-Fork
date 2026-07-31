@@ -40,3 +40,7 @@ demo/
 *.docx
 *.pdf
 *.backup
+
+# Local reference copy of the upstream project (jontiritilli/life-puck).
+# Kept on disk for lookups, not part of this repository.
+original/
