@@ -1,10 +1,11 @@
 #pragma once
 #include "Arduino.h"
+#include "board_config.h"
 
-// Simple I2S Audio for PCM5101 DAC
-#define I2S_DOUT 47
-#define I2S_BCLK 48  
-#define I2S_LRC  38
+// Simple I2S Audio for the PCM5101/PCM5100A DAC.
+// I2S_BCLK / I2S_LRC / I2S_DOUT are board-specific and defined in
+// board_config.h. I2S_SWITCH_PIN (Knob 1.8 only) selects the CH445P audio
+// mux input, see simple_audio_init().
 
 // Audio settings
 #define AUDIO_VOLUME_MAX 21

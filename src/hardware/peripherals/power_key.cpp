@@ -20,6 +20,7 @@
 // ============================================
 #include "../display/display_st77916.h"
 #include "../system/shutdown.h"
+#include "../system/power_management.h"
 
 // ============================================
 // Data Layer
@@ -31,6 +32,11 @@
 // ============================================
 #include "board_config.h"
 
+
+#if HAS_POWER_KEY
+// ============================================================================
+// Boards with a power button / power-control MOSFET (1.85C, 1.85)
+// ============================================================================
 
 // ### CORRECTION: Remove old, invalid declaration ###
 // extern esp_panel::board::Board *board;
@@ -67,22 +73,22 @@ void wake_up(void)
     pinMode(PWR_Control_PIN, OUTPUT);
     
 #ifdef BOARD_1_85C
-    // C-Modell: Hat einen Schalter - sofort einschalten ohne Verzögerung
-    // Schalter bleibt in Position, keine Prüfung nötig
+    // C model: has a switch - power on immediately, no delay needed
+    // (switch stays in position, no check required)
     digitalWrite(PWR_Control_PIN, HIGH);
     BAT_State = BAT_ON;
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-    printf("[wake_up] Wakeup reason: %d (C-Modell mit Schalter - sofort)\n", wakeup_reason);
+    printf("[wake_up] Wakeup reason: %d (C model with switch - immediate)\n", wakeup_reason);
 #else
-    // Nicht-C-Modell: Hat einen Button - 100ms Sicherheitsverzögerung
-    // Verhindert versehentliches Einschalten (z.B. im Rucksack)
+    // Non-C model: has a button - 100ms safety delay
+    // Prevents accidental power-on (e.g. in a backpack)
     digitalWrite(PWR_Control_PIN, LOW);
     vTaskDelay(100);
     if (!digitalRead(PWR_KEY_Input_PIN)) {
         BAT_State = BAT_ON;
         digitalWrite(PWR_Control_PIN, HIGH);
         esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-        printf("[wake_up] Wakeup reason: %d (Nicht-C-Modell mit Button - 100ms Check)\n", wakeup_reason);
+        printf("[wake_up] Wakeup reason: %d (non-C model with button - 100ms check)\n", wakeup_reason);
     }
 #endif
 }
@@ -90,8 +96,7 @@ void wake_up(void)
 void fall_asleep(void)
 {
     // Power down display and touch
-    // ### KORREKTUR: Alten Code durch neuen Treiber-Aufruf ersetzen ###
-    Set_Backlight(0); // Schaltet die Hintergrundbeleuchtung aus
+    Set_Backlight(0); // Turn off the backlight
     printf("[fall_asleep] Backlight OFF\n");
     
     digitalWrite(PWR_Control_PIN, LOW);
@@ -140,3 +145,38 @@ void power_init(void)
 {
     wake_up();
 }
+
+#else
+// ============================================================================
+// Boards without a power button / power-control MOSFET (Knob 1.8)
+// ============================================================================
+// The Knob board has neither PWR_KEY_Input_PIN nor PWR_Control_PIN (GPIO7 on
+// that board is the encoder's B line - driving it as an output would fight
+// the encoder's pull-up). power_init()/wake_up()/power_loop() are no-ops so
+// nothing else has to change; fall_asleep() only turns the display off,
+// since there is no reliable wake source on this board (deep sleep is not
+// supported here). See docs/PORT_KNOB_1_8.md Step 6.
+
+void wake_up(void)
+{
+    // No power key / power-control MOSFET on this board - nothing to do.
+}
+
+void power_init(void)
+{
+    // No power key on this board - nothing to do.
+}
+
+void power_loop(void)
+{
+    // No power key on this board - nothing to do.
+}
+
+void fall_asleep(void)
+{
+    printf("[Power] deep sleep not supported on this board\n");
+    Set_Backlight(0);
+    power_sleep_display();
+}
+
+#endif // HAS_POWER_KEY

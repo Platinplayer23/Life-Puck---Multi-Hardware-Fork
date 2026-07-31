@@ -1,10 +1,11 @@
 #pragma once
 #include <Arduino.h>
+#include "board_config.h"
 
-/// ADC pin connected to battery voltage divider
-#define BAT_ADC_PIN 8
-/// Calibration offset for accurate voltage measurement
-#define Measurement_offset 0.990476
+// BAT_ADC_PIN, BAT_ADC_SCALE and BAT_ADC_OFFSET are board-specific and
+// defined in board_config.h. On the Knob 1.8 board the ADC reads half of
+// the 5V system rail rather than the LiPo cell - see
+// docs/PORT_KNOB_1_8.md section 1 for details.
 
 /// Current battery voltage reading (updated by battery functions)
 extern float BAT_analogVolts;

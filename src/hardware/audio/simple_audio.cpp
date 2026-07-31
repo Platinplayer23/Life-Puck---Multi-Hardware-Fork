@@ -52,7 +52,18 @@ static const sound_def_t sounds[SOUND_COUNT] = {
 
 void simple_audio_init() {
     if (audio_initialized) return;
-    
+
+#ifdef I2S_SWITCH_PIN
+    // Knob 1.8 only: pin the CH445P 2:1 audio mux to this ESP32-S3's I2S
+    // output (GPIO0 already defaults HIGH via its pull-up, which already
+    // selects the S3 - driving it explicitly is the safe belt-and-braces
+    // move). GPIO0 is a strapping pin, so this must only happen after
+    // boot/setup() has started, never before.
+    pinMode(I2S_SWITCH_PIN, OUTPUT);
+    digitalWrite(I2S_SWITCH_PIN, HIGH);
+    printf("[Audio] I2S mux routed to this board's I2S output (I2S_SWITCH_PIN=%d)\n", I2S_SWITCH_PIN);
+#endif
+
     // Load settings from NVS
     audio_enabled = player_store.getInt("audio_enabled", AUDIO_ENABLED_DEFAULT) == 1;
     audio_volume = player_store.getInt("audio_volume", AUDIO_VOLUME_DEFAULT);

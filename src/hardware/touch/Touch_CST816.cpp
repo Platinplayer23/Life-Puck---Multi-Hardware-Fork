@@ -8,33 +8,33 @@ uint8_t Touch_interrupts=0;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// I2C - Unterschiedlich je Board-Variante
+// I2C - differs per board variant (USE_SEPARATE_TOUCH_BUS, see board_config.h)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, uint32_t Length)
 {
-#if defined(BOARD_1_85C)
-  // C-Variante: Haupt-I2C Bus (Wire)
-  Wire.beginTransmission(Driver_addr);
-  Wire.write(Reg_addr); 
-  if ( Wire.endTransmission(true)){
-    printf("The I2C transmission fails. - I2C Read\r\n");
-    return true;
-  }
-  Wire.requestFrom(Driver_addr, Length);
-  for (int i = 0; i < Length; i++) {
-    *Reg_data++ = Wire.read();
-  }
-#else
-  // Nicht-C: Separater Touch-I2C Bus (Wire1) wie im Demo
+#if USE_SEPARATE_TOUCH_BUS
+  // Touch controller on its own I2C bus (Wire1)
   Wire1.beginTransmission(Driver_addr);
-  Wire1.write(Reg_addr); 
+  Wire1.write(Reg_addr);
   if ( Wire1.endTransmission(true)){
     printf("The I2C transmission fails. - I2C Read\r\n");
-    return true;
+    return false;
   }
   Wire1.requestFrom(Driver_addr, Length);
   for (int i = 0; i < Length; i++) {
     *Reg_data++ = Wire1.read();
+  }
+#else
+  // Touch controller on the main I2C bus (Wire)
+  Wire.beginTransmission(Driver_addr);
+  Wire.write(Reg_addr);
+  if ( Wire.endTransmission(true)){
+    printf("The I2C transmission fails. - I2C Read\r\n");
+    return false;
+  }
+  Wire.requestFrom(Driver_addr, Length);
+  for (int i = 0; i < Length; i++) {
+    *Reg_data++ = Wire.read();
   }
 #endif
   return true;
@@ -42,26 +42,26 @@ bool I2C_Read_Touch(uint16_t Driver_addr, uint8_t Reg_addr, uint8_t *Reg_data, u
 
 bool I2C_Write_Touch(uint8_t Driver_addr, uint8_t Reg_addr, const uint8_t *Reg_data, uint32_t Length)
 {
-#if defined(BOARD_1_85C)
-  // C-Variante: Haupt-I2C Bus (Wire)
-  Wire.beginTransmission(Driver_addr);
-  Wire.write(Reg_addr);       
+#if USE_SEPARATE_TOUCH_BUS
+  // Touch controller on its own I2C bus (Wire1)
+  Wire1.beginTransmission(Driver_addr);
+  Wire1.write(Reg_addr);
   for (int i = 0; i < Length; i++) {
-    Wire.write(*Reg_data++);
+    Wire1.write(*Reg_data++);
   }
-  if ( Wire.endTransmission(true))
+  if ( Wire1.endTransmission(true))
   {
     printf("The I2C transmission fails. - I2C Write\r\n");
     return false;
   }
 #else
-  // Nicht-C: Separater Touch-I2C Bus (Wire1) wie im Demo
-  Wire1.beginTransmission(Driver_addr);
-  Wire1.write(Reg_addr);       
+  // Touch controller on the main I2C bus (Wire)
+  Wire.beginTransmission(Driver_addr);
+  Wire.write(Reg_addr);
   for (int i = 0; i < Length; i++) {
-    Wire1.write(*Reg_data++);
+    Wire.write(*Reg_data++);
   }
-  if ( Wire1.endTransmission(true))
+  if ( Wire.endTransmission(true))
   {
     printf("The I2C transmission fails. - I2C Write\r\n");
     return false;
@@ -79,16 +79,16 @@ void ARDUINO_ISR_ATTR Touch_CST816_ISR(void) {
 
 
 uint8_t Touch_Init(void) {
-#if defined(BOARD_1_85C)
-  // C-Variante: Kein separater Wire1.begin() - verwendet Haupt-I2C
-  // (I2C wird bereits über I2C_Init() in main.cpp initialisiert)
-#else
-  // Nicht-C: Separater Touch-I2C Bus (Wire1) wie im Demo
-  Wire1.begin(TOUCH_PIN_SDA, TOUCH_PIN_SCL, 400000);  // Pin 1,3 mit 400kHz
+#if USE_SEPARATE_TOUCH_BUS
+  // Separate touch I2C bus (Wire1), as shown by the vendor demo
+  Wire1.begin(TOUCH_PIN_SDA, TOUCH_PIN_SCL, 400000);
   printf("[Touch] Wire1 initialized: SDA=%d, SCL=%d\n", TOUCH_PIN_SDA, TOUCH_PIN_SCL);
+#else
+  // No separate Wire1.begin() needed - touch controller shares the main I2C
+  // bus, already initialized via I2C_Init() in main.cpp
 #endif
 
-  // GPIO Setup für Reset-Pin (falls nicht über EXIO)
+  // GPIO setup for the reset pin (if not handled via the GPIO expander)
   #if HAS_GPIO_EXTENDER == 0 && TOUCH_PIN_RST != -1
     gpio_config_t io_conf = {};
     io_conf.pin_bit_mask = (1ULL << TOUCH_PIN_RST);
@@ -113,12 +113,12 @@ uint8_t Touch_Init(void) {
 uint8_t CST816_Touch_Reset(void)
 {
 #if HAS_GPIO_EXTENDER
-  // 1.85C: Reset via EXIO
+  // Boards with a TCA9554 GPIO expander (1.85C, 1.85): reset via EXIO
   Set_EXIO(EXIO_PIN1, Low);
   vTaskDelay(pdMS_TO_TICKS(10));
   Set_EXIO(EXIO_PIN1, High);
 #else
-  // 1.85: Reset via Direct GPIO
+  // Boards without a GPIO expander (Knob 1.8): reset via direct GPIO
   gpio_set_level((gpio_num_t)TOUCH_PIN_RST, 0);
   vTaskDelay(pdMS_TO_TICKS(10));
   gpio_set_level((gpio_num_t)TOUCH_PIN_RST, 1);

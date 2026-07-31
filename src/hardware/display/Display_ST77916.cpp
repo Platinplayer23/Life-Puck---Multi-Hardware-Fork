@@ -203,12 +203,12 @@ static const st77916_lcd_init_cmd_t vendor_specific_init_new[] = {
 void ST7701_Reset()
 {
 #if HAS_GPIO_EXTENDER
-  // 1.85C: Reset via EXIO
+  // Boards with a TCA9554 GPIO expander (1.85C, 1.85): reset via EXIO
   Set_EXIO(EXIO_PIN2, Low);
   vTaskDelay(pdMS_TO_TICKS(10));
   Set_EXIO(EXIO_PIN2, High);
 #else
-  // 1.85: Reset via Direct GPIO
+  // Boards without a GPIO expander (Knob 1.8): reset via direct GPIO
   gpio_set_level((gpio_num_t)LCD_PIN_RST, 0);
   vTaskDelay(pdMS_TO_TICKS(10));
   gpio_set_level((gpio_num_t)LCD_PIN_RST, 1);
@@ -219,7 +219,7 @@ void ST7701_Reset()
 void LCD_Init()
 {
 #if HAS_GPIO_EXTENDER == 0
-  // 1.85: Setup Direct GPIO Pins for LCD Reset
+  // Boards without a GPIO expander (Knob 1.8): set up direct GPIO for LCD reset
   gpio_config_t io_conf = {};
   io_conf.pin_bit_mask = (1ULL << LCD_PIN_RST);
   io_conf.mode = GPIO_MODE_OUTPUT;
@@ -376,7 +376,13 @@ int QSPI_Init(void)
 void ST77916_Init()
 {
   ST7701_Reset();
+#if LCD_PIN_TE >= 0
   pinMode(ESP_PANEL_LCD_SPI_IO_TE, OUTPUT);
+#else
+  // LCD_PIN_TE is -1 on this board (TE not connected) - configuring GPIO -1
+  // would be a no-op at best and undefined behaviour at worst, so skip it.
+  printf("[LCD] TE pin not connected on this board, skipping pinMode(TE)\n");
+#endif
   if (!QSPI_Init())
   {
     printf("ST77916 Failed to be initialized\r\n");

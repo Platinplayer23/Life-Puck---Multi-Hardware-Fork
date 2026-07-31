@@ -30,21 +30,30 @@ This is a fork of [jontiritilli/life-puck](https://github.com/jontiritilli/life-
 
 ## 🔧 Hardware Support
 
-This fork supports **two** Waveshare ESP32-S3 display variants:
+This fork supports **three** Waveshare ESP32-S3 display variants:
 
 ### Supported Boards
 
-| Board | Display | Touch | GPIO Expander | AliExpress Bundle |
-|-------|---------|-------|---------------|-------------------|
-| **[ESP32-S3-Touch-LCD-1.85C](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85C)** | ST77916 (QSPI) | CST816 | ✅ TCA9554 | ✅ **Recommended** (includes case + battery) |
-| **[ESP32-S3-Touch-LCD-1.85](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85)** | ST77916 (QSPI) | CST816 | ❌ None | ❌ More expensive |
+| Board | Display | Touch | GPIO Expander | Power Button | AliExpress Bundle |
+|-------|---------|-------|---------------|---------------|-------------------|
+| **[ESP32-S3-Touch-LCD-1.85C](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85C)** | ST77916 (QSPI) | CST816 | ✅ TCA9554 | ✅ | ✅ **Recommended** (includes case + battery) |
+| **[ESP32-S3-Touch-LCD-1.85](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85)** | ST77916 (QSPI) | CST816 | ❌ None | ✅ | ❌ More expensive |
+| **[ESP32-S3-Knob-Touch-LCD-1.8](https://www.waveshare.com/wiki/ESP32-S3-Knob-Touch-LCD-1.8)** | ST77916 (QSPI) | CST816 | ❌ None | ❌ None | See note below |
 
 > **💡 Cost Tip:** The **1.85C variant** (at least in Europe) is significantly cheaper on AliExpress when purchased as a bundle with case and battery!
 
+> **⚠️ Knob 1.8 flashing note:** This board has **two** MCUs (the ESP32-S3 running this firmware, plus a second plain ESP32 for BT-audio/HID) sharing a single USB-C connector. The plug **orientation** selects which chip you flash. If the port doesn't show up in your OS, unplug the USB-C cable, flip it 180°, and re-plug.
+
+> **⚠️ Knob 1.8 known limitations:**
+> - **No power button, no deep sleep** - the board has neither a power key nor a power-control MOSFET, so `fall_asleep()` only blanks the display; it never enters `esp_deep_sleep_start()`.
+> - **Battery percentage is not meaningful** - the ADC on this board measures half of the 5V system rail, not the LiPo cell, so it will typically read close to 100% regardless of actual charge. Low-battery dimming defaults to OFF on this board for that reason; the battery UI is left in place and will just show a bogus reading. The raw ADC millivolt reading is printed to the serial log at boot so the assumption can be checked on real hardware.
+> - **Rotary encoder is not wired into the UI** - `ENCODER_PIN_A`/`ENCODER_PIN_B` are defined in `include/board_config.h` for future use, but this port does not read the encoder.
+> - See `docs/PORT_KNOB_1_8.md` for the full schematic-derived pin map and porting notes.
+
 ### Hardware Specifications
 
-- **MCU:** ESP32-S3-WROOM-1 (N16R8) - 16MB Flash, 8MB PSRAM
-- **Display:** 1.85" Round LCD, 360x360px, ST77916 driver (QSPI mode)
+- **MCU:** ESP32-S3-WROOM-1 (N16R8) or ESP32-S3-R8 module - 16MB Flash, 8MB PSRAM
+- **Display:** 1.85"/1.8" Round LCD, 360x360px, ST77916 driver (QSPI mode)
 - **Touch:** Capacitive touch screen, CST816 controller
 - **Connectivity:** USB-C, Wi-Fi, Bluetooth
 
@@ -53,9 +62,10 @@ This fork supports **two** Waveshare ESP32-S3 display variants:
 ## 🆕 New Features in This Fork
 
 ### Hardware Support
-- ✅ **Dual board support**: ESP32-S3-Touch-LCD-1.85C and 1.85
-- ✅ **GPIO Expander handling**: Automatic detection and configuration for TCA9554
-- ✅ **Unified codebase**: Single project for both hardware variants
+- ✅ **Triple board support**: ESP32-S3-Touch-LCD-1.85C, 1.85, and Knob-Touch-LCD-1.8
+- ✅ **GPIO Expander handling**: Automatic detection and configuration for TCA9554 (1.85C/1.85 only)
+- ✅ **Unified codebase**: Single project for all three hardware variants, `include/board_config.h` is the single source of truth for board-specific pins
+- ✅ **Boot-time I2C diagnostics**: Optional I2C bus scan (`I2C_DEBUG_SCAN` in `config.h`) prints every responding I2C address, making pinout mismatches self-diagnosing
 
 ### Build System Improvements
 - ✅ **Arduino 3.x support**: Uses latest ESP-IDF 5.3 based framework via [pioarduino](https://github.com/pioarduino/platform-espressif32)
@@ -861,6 +871,7 @@ See [LICENSE](LICENSE) for details.
 ### Hardware Documentation
 - [ESP32-S3-Touch-LCD-1.85C Wiki](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85C)
 - [ESP32-S3-Touch-LCD-1.85 Wiki](https://www.waveshare.com/wiki/ESP32-S3-Touch-LCD-1.85)
+- [ESP32-S3-Knob-Touch-LCD-1.8 Wiki](https://www.waveshare.com/wiki/ESP32-S3-Knob-Touch-LCD-1.8)
 - [ESP32-S3 Datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf)
 
 ### Software Resources

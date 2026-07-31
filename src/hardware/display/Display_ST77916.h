@@ -1,8 +1,9 @@
 #pragma once
+#include "board_config.h"
 #include "../peripherals/tca9554_power.h"
 #include "../touch/Touch_CST816.h"
 
-#define LCD_Backlight_PIN 5
+#define LCD_Backlight_PIN LCD_PIN_BL
 #define PWM_Channel 1   // PWM Channel
 #define Frequency 20000 // PWM frequencyconst
 #define Resolution 10   // PWM resolution ratio     MAX:13
@@ -20,14 +21,15 @@
 #define ESP_PANEL_LCD_SPI_CMD_BITS (32)             // Typically set to 32
 #define ESP_PANEL_LCD_SPI_PARAM_BITS (8)            // Typically set to 8
 
-#define ESP_PANEL_LCD_SPI_IO_TE (18)
-#define ESP_PANEL_LCD_SPI_IO_SCK (40)
-#define ESP_PANEL_LCD_SPI_IO_DATA0 (46)
-#define ESP_PANEL_LCD_SPI_IO_DATA1 (45)
-#define ESP_PANEL_LCD_SPI_IO_DATA2 (42)
-#define ESP_PANEL_LCD_SPI_IO_DATA3 (41)
-#define ESP_PANEL_LCD_SPI_IO_CS (21)
-#define EXAMPLE_LCD_PIN_NUM_RST (-1) // EXIO2
+// LCD QSPI pins - board-specific, see board_config.h
+#define ESP_PANEL_LCD_SPI_IO_TE (LCD_PIN_TE)
+#define ESP_PANEL_LCD_SPI_IO_SCK (LCD_PIN_SCK)
+#define ESP_PANEL_LCD_SPI_IO_DATA0 (LCD_PIN_DATA0)
+#define ESP_PANEL_LCD_SPI_IO_DATA1 (LCD_PIN_DATA1)
+#define ESP_PANEL_LCD_SPI_IO_DATA2 (LCD_PIN_DATA2)
+#define ESP_PANEL_LCD_SPI_IO_DATA3 (LCD_PIN_DATA3)
+#define ESP_PANEL_LCD_SPI_IO_CS (LCD_PIN_CS)
+#define EXAMPLE_LCD_PIN_NUM_RST (-1) // Panel is reset manually before esp_lcd_panel_reset(), see ST7701_Reset()
 #define EXAMPLE_LCD_PIN_NUM_BK_LIGHT (-1)
 
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL (1)

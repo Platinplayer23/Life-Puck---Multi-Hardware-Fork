@@ -24,6 +24,7 @@
 // Hardware Layer
 // ============================================
 #include "hardware/peripherals/i2c_Driver.h"
+#include "hardware/peripherals/i2c_scanner.h"
 #include "hardware/peripherals/tca9554_power.h"
 #include "hardware/peripherals/power_key.h"
 #include "hardware/display/display_st77916.h"
@@ -107,8 +108,15 @@ void setup()
 
     // Hardware initialization sequence
     I2C_Init();
-    TCA9554PWR_Init();
-    
+    #if I2C_DEBUG_SCAN
+        I2C_Scan();
+    #endif
+    #if HAS_GPIO_EXTENDER
+        TCA9554PWR_Init();
+    #endif
+    // Boards without a TCA9554 (Knob 1.8) skip this entirely - calling it there
+    // would just spam "Data Transfer Failure" for a chip that isn't on the board.
+
     // Power button initialization (MUST be called early!)
     power_init();
     printf("[MAIN] Power button initialized\n");

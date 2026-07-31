@@ -26,6 +26,16 @@
 #define FORCE_NVS_CLEAR false           // Erase ALL saved data (nuclear option)
 #define SKIP_INITIAL_CALIBRATION false  // Skip calibration screen on first boot
 
+// Boot-time I2C bus scan (src/hardware/peripherals/i2c_scanner.cpp).
+// Default ON for the Knob board for now, so a pinout mismatch is
+// self-diagnosing in the serial log; default OFF elsewhere to keep the
+// 1.85C/1.85 boot log unchanged.
+#if defined(BOARD_KNOB_1_8)
+    #define I2C_DEBUG_SCAN 1
+#else
+    #define I2C_DEBUG_SCAN 0
+#endif
+
 // ============================================================================
 // 🎨 THEME CONFIGURATION
 // ============================================================================
@@ -247,13 +257,29 @@
 // Solution: DECREASE DIVISOR (try 0.8, 0.6, etc.)
 // ============================================================================
 
-#define TOUCH_CAL_DEFAULT_OFFSET_X 23.5f
-#define TOUCH_CAL_DEFAULT_SCALE_X 0.90f
-#define TOUCH_CAL_DEFAULT_SHEAR_XY 0.0f
-#define TOUCH_CAL_DEFAULT_OFFSET_Y -7.0f
-#define TOUCH_CAL_DEFAULT_SHEAR_YX 0.0f
-#define TOUCH_CAL_DEFAULT_SCALE_Y 0.95f
-#define TOUCH_CAL_DEFAULT_DIVISOR 1.0f
+#if defined(BOARD_KNOB_1_8)
+    // The Knob 1.8 panel is a different 360x360 module than the 1.85
+    // boards, so the tuned offsets below almost certainly don't apply.
+    // Seed with the identity transform and rely on the in-app 3-round
+    // calibration screen until board-specific defaults are established on
+    // real hardware.
+    #define TOUCH_CAL_DEFAULT_OFFSET_X 0.0f
+    #define TOUCH_CAL_DEFAULT_SCALE_X 1.0f
+    #define TOUCH_CAL_DEFAULT_SHEAR_XY 0.0f
+    #define TOUCH_CAL_DEFAULT_OFFSET_Y 0.0f
+    #define TOUCH_CAL_DEFAULT_SHEAR_YX 0.0f
+    #define TOUCH_CAL_DEFAULT_SCALE_Y 1.0f
+    #define TOUCH_CAL_DEFAULT_DIVISOR 1.0f
+#else
+    // Tuned for the ESP32-S3-Touch-LCD-1.85C panel; also used by 1.85.
+    #define TOUCH_CAL_DEFAULT_OFFSET_X 23.5f
+    #define TOUCH_CAL_DEFAULT_SCALE_X 0.90f
+    #define TOUCH_CAL_DEFAULT_SHEAR_XY 0.0f
+    #define TOUCH_CAL_DEFAULT_OFFSET_Y -7.0f
+    #define TOUCH_CAL_DEFAULT_SHEAR_YX 0.0f
+    #define TOUCH_CAL_DEFAULT_SCALE_Y 0.95f
+    #define TOUCH_CAL_DEFAULT_DIVISOR 1.0f
+#endif
 
 // ============================================================================
 // 🖥️  DISPLAY & POWER DEFAULTS
@@ -274,7 +300,15 @@
 #define SLEEP_DEFAULT 300 // Default: 300s (5 minutes)
 
 // Low Battery Dimming
-#define LOW_BATTERY_DIM_DEFAULT 1 // Default: 1 (ON)
+// The Knob 1.8 board's ADC reads half of the 5V system rail, not the LiPo
+// cell (see docs/PORT_KNOB_1_8.md section 1), so the battery reading is
+// meaningless there. Default battery saver OFF on that board so the bogus
+// reading can never trigger dimming or the critical-battery shutdown path.
+#if defined(BOARD_KNOB_1_8)
+    #define LOW_BATTERY_DIM_DEFAULT 0 // Default: 0 (OFF) - battery reading not meaningful on this board
+#else
+    #define LOW_BATTERY_DIM_DEFAULT 1 // Default: 1 (ON)
+#endif
 
 // ============================================================================
 // 🔊 AUDIO DEFAULTS

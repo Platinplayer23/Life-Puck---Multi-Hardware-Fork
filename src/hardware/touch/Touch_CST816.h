@@ -17,14 +17,15 @@
 // ============================================
 // Hardware Dependencies
 // ============================================
+#include "board_config.h"
 #include "../peripherals/tca9554_power.h"
 
 /// I2C address of CST816 touch controller
 #define CST816_ADDR           0x15
-/// GPIO pin connected to touch interrupt
-#define CST816_INT_PIN        4
-/// Touch controller reset pin (handled via GPIO expander)
-#define CST816_RST_PIN        -1
+/// GPIO pin connected to touch interrupt (board-specific, see board_config.h)
+#define CST816_INT_PIN        TOUCH_PIN_INT
+/// Touch controller reset pin (board-specific, see board_config.h; -1 means "handled via GPIO expander")
+#define CST816_RST_PIN        TOUCH_PIN_RST
 /// I2C bus frequency for touch communication
 #define I2C_MASTER_FREQ_HZ    400000
 

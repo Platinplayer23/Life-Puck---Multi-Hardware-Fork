@@ -1,9 +1,11 @@
 #pragma once
 #include "Arduino.h"
+#include "board_config.h"
 
+// PWR_KEY_Input_PIN / PWR_Control_PIN are board-specific and defined in
+// board_config.h. They are only defined on boards with HAS_POWER_KEY (the
+// Knob 1.8 board has neither a power button nor a power-control MOSFET).
 #define LCD_BL_PIN 5
-#define PWR_KEY_Input_PIN 6
-#define PWR_Control_PIN 7
 
 #define Device_Wake_Time 2 * 1000  // 2 seconds (assuming loop rate is 50Hz)
 #define Device_Sleep_Time 3 * 1000 // 3 seconds (assuming loop rate is 50Hz)

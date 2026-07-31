@@ -12,14 +12,23 @@ void battery_init(void)
 {
   // Set ADC resolution to 12 bits (0-4095) for precise voltage measurement
   analogReadResolution(12);
+
+  // Print the raw ADC reading alongside the computed voltage so the
+  // BAT_ADC_SCALE/BAT_ADC_OFFSET assumption for this board can be verified
+  // against real hardware (this matters especially on the Knob 1.8 board,
+  // see docs/PORT_KNOB_1_8.md section 1).
+  int raw_mv = analogReadMilliVolts(BAT_ADC_PIN);
+  float volts = battery_get_volts();
+  printf("[Battery] Raw ADC: %d mV, Computed: %.3f V (scale=%.4f, offset=%.6f)\n",
+         raw_mv, volts, (float)BAT_ADC_SCALE, (float)BAT_ADC_OFFSET);
 }
 
 float battery_get_volts(void)
 {
   // Read raw ADC value in millivolts
   int Volts = analogReadMilliVolts(BAT_ADC_PIN);
-  // Apply voltage divider calculation and calibration offset
-  BAT_analogVolts = (float)(Volts * 3.0 / 1000.0) / Measurement_offset;
+  // Apply voltage divider calculation and calibration offset (board-specific)
+  BAT_analogVolts = (float)(Volts * BAT_ADC_SCALE / 1000.0) / BAT_ADC_OFFSET;
   return BAT_analogVolts;
 }
 
