@@ -1,8 +1,14 @@
 // =========================================================================
-// TOUCH_CALIBRATION.CPP - CLEAN 3-ROUND CALIBRATION
-// Round 1: Full calibration (Coarse + Fine)
-// Round 2: Refinement of all parameters
-// Round 3: Final offset adjustment
+// TOUCH_CALIBRATION.CPP - CENTRE-ANCHORED CALIBRATION (Suthe's Method v2)
+//
+// Step 1: CENTER   - direct measurement of raw touch at the screen centre
+// Step 2: SCALE_X  - edge dot, proportional-feedback loop (coarse + fine)
+// Step 3: SCALE_Y  - edge dot, proportional-feedback loop (coarse + fine)
+// Step 4: VERIFY   - centre dot again, informational residual-error readout
+// Step 5: SUMMARY  - save and exit
+//
+// See docs/Suthes_Method_Touch_Calibration.md for the full write-up of why
+// scaling is anchored at the measured centre instead of the raw origin.
 // =========================================================================
 
 #include "touch_calibration.h"
@@ -29,25 +35,17 @@ extern struct CST816_Touch touch_data;
 #define CORRECTION_SPEED_COARSE 0.3f
 #define CORRECTION_SPEED_FINE 0.1f
 
+// Screen-space anchor for the centre-anchored scaling model. See the "New
+// step sequence" section of the design doc for the algebra.
+#define CENTER_X (SCREEN_WIDTH / 2)
+#define CENTER_Y (SCREEN_HEIGHT / 2)
+
 typedef enum
 {
-  // Round 1: Full calibration (Coarse + Fine)
-  CAL_STEP_OFFSET_X,
-  CAL_STEP_OFFSET_Y,
-  CAL_STEP_ROTATION,
+  CAL_STEP_CENTER,
   CAL_STEP_SCALE_X,
   CAL_STEP_SCALE_Y,
-
-  // Round 2: Refinement
-  CAL_STEP_ROUND2_OFFSET_X,
-  CAL_STEP_ROUND2_OFFSET_Y,
-  CAL_STEP_ROUND2_ROTATION,
-  CAL_STEP_ROUND2_SCALE_X,
-  CAL_STEP_ROUND2_SCALE_Y,
-
-  // Round 3: Final offset
-  CAL_STEP_ROUND3_OFFSET_X,
-  CAL_STEP_ROUND3_OFFSET_Y,
+  CAL_STEP_VERIFY,
 
   CAL_STEP_SUMMARY,
   CAL_STEP_FINISHED
@@ -69,43 +67,46 @@ static lv_obj_t *target_visual = nullptr;
 static bool step_is_locked = false;
 static int lock_frame_counter = 0;
 
-static float current_theta = 0.0f;
+// Centre-anchored model parameters: cal_x = CENTER_X + sx * (raw_x - rx0),
+// cal_y = CENTER_Y + sy * (raw_y - ry0). rx0/ry0 are the raw touch
+// coordinates measured at the screen centre (CAL_STEP_CENTER).
 static float current_scale_x = 1.0f;
 static float current_scale_y = 1.0f;
+static float current_rx0 = 0.0f;
+static float current_ry0 = 0.0f;
+
+// Moving-average window for the SCALE_X / SCALE_Y proportional-feedback
+// loop. TOLERANCE_FINE (2px) is below what a finger reproducibly hits, so
+// noise is filtered by averaging raw samples rather than trusting a single
+// 50ms reading.
+static float scale_sample_buf[CALIBRATION_SAMPLE_FRAMES];
+static int scale_sample_count = 0;
+static int scale_sample_idx = 0;
 
 static lv_obj_t *confirmation_screen = nullptr;
 static lv_obj_t *countdown_label = nullptr;
 static uint32_t confirmation_start_time = 0;
 static lv_timer_t *confirmation_timer = nullptr;
 
-static const char *TXT_OFFSET_X_COARSE = "Hold red dot\n(Coarse)";
-static const char *TXT_OFFSET_X_FINE = "Hold red dot\n(Fine)";
-static const char *TXT_OFFSET_Y_COARSE = "Keep holding\n(Coarse)";
-static const char *TXT_OFFSET_Y_FINE = "Keep holding\n(Fine)";
-static const char *TXT_ROTATION_COARSE = "Hold red dot\non red line (Coarse)";
-static const char *TXT_ROTATION_FINE = "Hold red dot\non red line (Fine)";
+static const char *TXT_CENTER = "Hold red dot\nin the centre";
 static const char *TXT_SCALE_X_COARSE = "Hold red dot\n(Coarse)";
 static const char *TXT_SCALE_X_FINE = "Hold red dot\n(Fine)";
 static const char *TXT_SCALE_Y_COARSE = "Hold red dot\n(Coarse)";
 static const char *TXT_SCALE_Y_FINE = "Hold red dot\n(Fine)";
-
-static const char *TXT_ROUND2_OFFSET_X = "Refine X";
-static const char *TXT_ROUND2_OFFSET_Y = "Refine Y";
-static const char *TXT_ROUND2_ROTATION = "Refine angle";
-static const char *TXT_ROUND2_SCALE_X = "Refine scale X";
-static const char *TXT_ROUND2_SCALE_Y = "Refine scale Y";
-
-static const char *TXT_ROUND3_OFFSET_X = "Final X";
-static const char *TXT_ROUND3_OFFSET_Y = "Final Y";
+static const char *TXT_VERIFY = "Touch the centre\nto verify";
 
 static const char *TXT_LOCKED = "OK!\nRelease finger";
 static const char *TXT_SUMMARY = "Calibration complete!\n\nTouch to exit";
 
 static void setup_ui_for_step(calibration_step_t step);
 static void process_calibration_logic(lv_timer_t *timer);
+static void process_measurement_step(calibration_step_t step);
 static void save_and_exit_calibration();
 static void advance_to_next_step();
-static void update_rotation_matrix(float theta);
+static void rebuild_matrix();
+static void reset_scale_samples();
+static float push_scale_sample(int16_t raw_value);
+static lv_obj_t *create_target_dot();
 
 void resetTouchCalibrationToDefaults()
 {
@@ -153,12 +154,57 @@ void confirmTouchCalibration()
   printf("[TouchCal] Confirmed\n");
 }
 
-static void update_rotation_matrix(float theta)
+// Rebuild the 7-parameter runtime matrix from the centre-anchored model
+// (current_scale_x, current_scale_y, current_rx0, current_ry0). Call this
+// whenever any of those four values change -- it is the only place that
+// writes temp_cal_matrix, so offset and scale can never drift out of sync.
+//
+// cal_x = CENTER_X + sx * (raw_x - rx0) = sx*raw_x + (CENTER_X - sx*rx0)
+// cal_y = CENTER_Y + sy * (raw_y - ry0) = sy*raw_y + (CENTER_Y - sy*ry0)
+static void rebuild_matrix()
 {
-  temp_cal_matrix[1] = current_scale_x * cosf(theta);
-  temp_cal_matrix[2] = current_scale_x * sinf(theta);
-  temp_cal_matrix[4] = -current_scale_y * sinf(theta);
-  temp_cal_matrix[5] = current_scale_y * cosf(theta);
+  temp_cal_matrix[0] = CENTER_X - current_scale_x * current_rx0; // C
+  temp_cal_matrix[1] = current_scale_x;                          // A
+  temp_cal_matrix[2] = 0.0f;                                     // B (no shear/rotation)
+  temp_cal_matrix[3] = CENTER_Y - current_scale_y * current_ry0; // F
+  temp_cal_matrix[4] = 0.0f;                                     // D (no shear/rotation)
+  temp_cal_matrix[5] = current_scale_y;                          // E
+  temp_cal_matrix[6] = 1.0f;                                     // divisor
+}
+
+static void reset_scale_samples()
+{
+  scale_sample_count = 0;
+  scale_sample_idx = 0;
+}
+
+static float push_scale_sample(int16_t raw_value)
+{
+  scale_sample_buf[scale_sample_idx] = (float)raw_value;
+  scale_sample_idx = (scale_sample_idx + 1) % CALIBRATION_SAMPLE_FRAMES;
+  if (scale_sample_count < CALIBRATION_SAMPLE_FRAMES)
+  {
+    scale_sample_count++;
+  }
+
+  float sum = 0.0f;
+  for (int i = 0; i < scale_sample_count; i++)
+  {
+    sum += scale_sample_buf[i];
+  }
+  return sum / (float)scale_sample_count;
+}
+
+static lv_obj_t *create_target_dot()
+{
+  lv_obj_t *dot = lv_obj_create(cal_screen);
+  lv_obj_remove_style_all(dot);
+  lv_obj_set_style_bg_color(dot, lv_color_hex(0xFF0000), 0);
+  lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
+  lv_obj_set_style_radius(dot, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_size(dot, 30, 30);
+  lv_obj_clear_flag(dot, LV_OBJ_FLAG_CLICKABLE);
+  return dot;
 }
 
 void renderTouchCalibrationConfirmation()
@@ -255,7 +301,7 @@ void teardownTouchCalibrationConfirmation()
 
 void renderTouchCalibrationScreen()
 {
-  printf("[TouchCal] Starting clean 3-round calibration\n");
+  printf("[TouchCal] Starting centre-anchored calibration\n");
 
   power_suspend(true);
   teardownTouchCalibrationScreen();
@@ -269,33 +315,28 @@ void renderTouchCalibrationScreen()
   lv_obj_center(cal_screen);
 
   const float *defaults = getDefaultCalibrationMatrix();
-  for (int i = 0; i < 7; i++)
-  {
-    temp_cal_matrix[i] = defaults[i];
-  }
 
-  current_scale_x = temp_cal_matrix[1];
-  current_scale_y = temp_cal_matrix[5];
-  current_theta = 0.0f;
+  // Seed the centre-anchored model from the currently stored (possibly
+  // origin-anchored) matrix. This is only a starting point: CAL_STEP_CENTER
+  // re-measures rx0/ry0 directly, and CAL_STEP_SCALE_X/Y re-measure scale,
+  // so any shear in the stored matrix (not representable in this model) is
+  // simply discarded rather than approximated.
+  current_scale_x = defaults[1];
+  current_scale_y = defaults[5];
+  current_rx0 = (current_scale_x != 0.0f) ? (CENTER_X - defaults[0]) / current_scale_x : (float)CENTER_X;
+  current_ry0 = (current_scale_y != 0.0f) ? (CENTER_Y - defaults[3]) / current_scale_y : (float)CENTER_Y;
+  rebuild_matrix();
 
-  if (fabs(temp_cal_matrix[2]) > 0.01f)
-  {
-    current_scale_x = sqrtf(temp_cal_matrix[1] * temp_cal_matrix[1] +
-                            temp_cal_matrix[2] * temp_cal_matrix[2]);
-    current_scale_y = sqrtf(temp_cal_matrix[4] * temp_cal_matrix[4] +
-                            temp_cal_matrix[5] * temp_cal_matrix[5]);
-    current_theta = atan2f(temp_cal_matrix[2], temp_cal_matrix[1]);
-  }
+  printf("[TouchCal] Init: scale=(%.3f,%.3f) rx0/ry0=(%.1f,%.1f)\n",
+         current_scale_x, current_scale_y, current_rx0, current_ry0);
 
-  printf("[TouchCal] Init: offset=(%.1f,%.1f) scale=(%.3f,%.3f) theta=%.3f\n",
-         temp_cal_matrix[0], temp_cal_matrix[3], current_scale_x, current_scale_y, current_theta);
-
-  current_step = CAL_STEP_OFFSET_X;
+  current_step = CAL_STEP_CENTER;
   current_pass = CAL_PASS_COARSE;
   step_is_locked = false;
   lock_frame_counter = 0;
+  reset_scale_samples();
 
-  setup_ui_for_step(CAL_STEP_OFFSET_X);
+  setup_ui_for_step(CAL_STEP_CENTER);
   cal_timer = lv_timer_create(process_calibration_logic, 50, NULL);
 }
 
@@ -320,8 +361,9 @@ static void advance_to_next_step()
 {
   printf("[TouchCal] Advancing from step %d (pass %d)\n", current_step, current_pass);
 
-  // Round 1: Coarse -> Fine
-  if (current_step <= CAL_STEP_SCALE_Y && current_pass == CAL_PASS_COARSE)
+  // SCALE_X / SCALE_Y each get a Coarse -> Fine pass before moving on.
+  bool has_passes = (current_step == CAL_STEP_SCALE_X || current_step == CAL_STEP_SCALE_Y);
+  if (has_passes && current_pass == CAL_PASS_COARSE)
   {
     current_pass = CAL_PASS_FINE;
     step_is_locked = false;
@@ -330,7 +372,6 @@ static void advance_to_next_step()
     return;
   }
 
-  // All other steps: advance
   step_is_locked = false;
   lock_frame_counter = 0;
   current_pass = CAL_PASS_COARSE;
@@ -365,12 +406,10 @@ static void setup_ui_for_step(calibration_step_t step)
     char summary[300];
     snprintf(summary, sizeof(summary),
              "%s\n\n"
-             "Offset: (%.1f, %.1f)\n"
-             "Rotation: %.1f°\n"
+             "Centre raw: (%.1f, %.1f)\n"
              "Scale: (%.3f, %.3f)",
              TXT_SUMMARY,
-             temp_cal_matrix[0], temp_cal_matrix[3],
-             current_theta * 180.0f / M_PI,
+             current_rx0, current_ry0,
              current_scale_x, current_scale_y);
 
     lv_label_set_text(info_label, summary);
@@ -387,121 +426,39 @@ static void setup_ui_for_step(calibration_step_t step)
 
   switch (step)
   {
-  case CAL_STEP_OFFSET_X:
-  case CAL_STEP_ROUND2_OFFSET_X:
-  case CAL_STEP_ROUND3_OFFSET_X:
+  case CAL_STEP_CENTER:
   {
-    if (step == CAL_STEP_ROUND3_OFFSET_X)
-    {
-      lv_label_set_text_static(info_label, TXT_ROUND3_OFFSET_X);
-    }
-    else if (step == CAL_STEP_ROUND2_OFFSET_X)
-    {
-      lv_label_set_text_static(info_label, TXT_ROUND2_OFFSET_X);
-    }
-    else
-    {
-      lv_label_set_text_static(info_label,
-                               current_pass == CAL_PASS_COARSE ? TXT_OFFSET_X_COARSE : TXT_OFFSET_X_FINE);
-    }
-
-    target_visual = lv_obj_create(cal_screen);
-    lv_obj_remove_style_all(target_visual);
-    lv_obj_set_style_bg_color(target_visual, lv_color_hex(0xFF0000), 0);
-    lv_obj_set_style_bg_opa(target_visual, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(target_visual, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_size(target_visual, 30, 30);
-    lv_obj_clear_flag(target_visual, LV_OBJ_FLAG_CLICKABLE);
+    lv_label_set_text_static(info_label, TXT_CENTER);
+    target_visual = create_target_dot();
     lv_obj_align(target_visual, LV_ALIGN_CENTER, 0, 0);
-    break;
-  }
-
-  case CAL_STEP_OFFSET_Y:
-  case CAL_STEP_ROUND2_OFFSET_Y:
-  case CAL_STEP_ROUND3_OFFSET_Y:
-  {
-    if (step == CAL_STEP_ROUND3_OFFSET_Y)
-    {
-      lv_label_set_text_static(info_label, TXT_ROUND3_OFFSET_Y);
-    }
-    else if (step == CAL_STEP_ROUND2_OFFSET_Y)
-    {
-      lv_label_set_text_static(info_label, TXT_ROUND2_OFFSET_Y);
-    }
-    else
-    {
-      lv_label_set_text_static(info_label,
-                               current_pass == CAL_PASS_COARSE ? TXT_OFFSET_Y_COARSE : TXT_OFFSET_Y_FINE);
-    }
-
-    target_visual = lv_obj_create(cal_screen);
-    lv_obj_remove_style_all(target_visual);
-    lv_obj_set_style_bg_color(target_visual, lv_color_hex(0xFF0000), 0);
-    lv_obj_set_style_bg_opa(target_visual, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(target_visual, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_size(target_visual, 30, 30);
-    lv_obj_clear_flag(target_visual, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_align(target_visual, LV_ALIGN_CENTER, 0, 0);
-    break;
-  }
-
-  case CAL_STEP_ROTATION:
-  case CAL_STEP_ROUND2_ROTATION:
-  {
-    lv_label_set_text_static(info_label,
-                             step == CAL_STEP_ROUND2_ROTATION ? TXT_ROUND2_ROTATION : (current_pass == CAL_PASS_COARSE ? TXT_ROTATION_COARSE : TXT_ROTATION_FINE));
-
-    target_visual = lv_obj_create(cal_screen);
-    lv_obj_remove_style_all(target_visual);
-    lv_obj_set_style_bg_color(target_visual, lv_color_hex(0xFF0000), 0);
-    lv_obj_set_style_bg_opa(target_visual, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(target_visual, 0, 0);
-    lv_obj_set_size(target_visual, 5, SCREEN_HEIGHT);
-    lv_obj_clear_flag(target_visual, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_align(target_visual, LV_ALIGN_CENTER, 0, 0);
-
-    lv_obj_t *guide_dot = lv_obj_create(cal_screen);
-    lv_obj_remove_style_all(guide_dot);
-    lv_obj_set_style_bg_color(guide_dot, lv_color_hex(0xFF0000), 0);
-    lv_obj_set_style_bg_opa(guide_dot, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(guide_dot, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_size(guide_dot, 25, 25);
-    lv_obj_set_pos(guide_dot, (SCREEN_WIDTH / 2) - 12, (SCREEN_HEIGHT / 4) - 12);
-    lv_obj_clear_flag(guide_dot, LV_OBJ_FLAG_CLICKABLE);
     break;
   }
 
   case CAL_STEP_SCALE_X:
-  case CAL_STEP_ROUND2_SCALE_X:
   {
+    reset_scale_samples();
     lv_label_set_text_static(info_label,
-                             step == CAL_STEP_ROUND2_SCALE_X ? TXT_ROUND2_SCALE_X : (current_pass == CAL_PASS_COARSE ? TXT_SCALE_X_COARSE : TXT_SCALE_X_FINE));
-
-    target_visual = lv_obj_create(cal_screen);
-    lv_obj_remove_style_all(target_visual);
-    lv_obj_set_style_bg_color(target_visual, lv_color_hex(0xFF0000), 0);
-    lv_obj_set_style_bg_opa(target_visual, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(target_visual, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_size(target_visual, 30, 30);
-    lv_obj_clear_flag(target_visual, LV_OBJ_FLAG_CLICKABLE);
+                             current_pass == CAL_PASS_COARSE ? TXT_SCALE_X_COARSE : TXT_SCALE_X_FINE);
+    target_visual = create_target_dot();
     lv_obj_align(target_visual, LV_ALIGN_RIGHT_MID, -20, 0);
     break;
   }
 
   case CAL_STEP_SCALE_Y:
-  case CAL_STEP_ROUND2_SCALE_Y:
   {
+    reset_scale_samples();
     lv_label_set_text_static(info_label,
-                             step == CAL_STEP_ROUND2_SCALE_Y ? TXT_ROUND2_SCALE_Y : (current_pass == CAL_PASS_COARSE ? TXT_SCALE_Y_COARSE : TXT_SCALE_Y_FINE));
-
-    target_visual = lv_obj_create(cal_screen);
-    lv_obj_remove_style_all(target_visual);
-    lv_obj_set_style_bg_color(target_visual, lv_color_hex(0xFF0000), 0);
-    lv_obj_set_style_bg_opa(target_visual, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(target_visual, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_size(target_visual, 30, 30);
-    lv_obj_clear_flag(target_visual, LV_OBJ_FLAG_CLICKABLE);
+                             current_pass == CAL_PASS_COARSE ? TXT_SCALE_Y_COARSE : TXT_SCALE_Y_FINE);
+    target_visual = create_target_dot();
     lv_obj_align(target_visual, LV_ALIGN_BOTTOM_MID, 0, -20);
+    break;
+  }
+
+  case CAL_STEP_VERIFY:
+  {
+    lv_label_set_text_static(info_label, TXT_VERIFY);
+    target_visual = create_target_dot();
+    lv_obj_align(target_visual, LV_ALIGN_CENTER, 0, 0);
     break;
   }
 
@@ -512,10 +469,116 @@ static void setup_ui_for_step(calibration_step_t step)
   lv_obj_update_layout(cal_screen);
 }
 
+// CAL_STEP_CENTER and CAL_STEP_VERIFY are direct measurements, not
+// proportional-feedback loops: hold the dot, discard the first few frames
+// (finger settling), average a fixed number of frames, then act on the
+// result. No error correction loop is needed for either.
+static void process_measurement_step(calibration_step_t step)
+{
+  static int settle_counter = 0;
+  static float sum_x = 0.0f;
+  static float sum_y = 0.0f;
+  static int sample_n = 0;
+  static uint32_t release_time = 0;
+
+  if (step_is_locked)
+  {
+    // Wait for a clean release (300ms with no touch) before advancing.
+    Touch_Read_Data();
+    int pts = touch_data.points;
+    touch_data.points = 0;
+
+    if (pts == 0)
+    {
+      if (release_time == 0)
+      {
+        release_time = millis();
+      }
+      else if (millis() - release_time > 300)
+      {
+        release_time = 0;
+        advance_to_next_step();
+      }
+    }
+    else
+    {
+      release_time = 0;
+    }
+    return;
+  }
+
+  Touch_Read_Data();
+  if (touch_data.points == 0)
+  {
+    // Not touching yet, or the finger lifted before sampling finished.
+    // Discard whatever was collected and wait for a fresh, continuous hold.
+    settle_counter = 0;
+    sum_x = 0.0f;
+    sum_y = 0.0f;
+    sample_n = 0;
+    return;
+  }
+
+  if (settle_counter < CALIBRATION_SETTLE_FRAMES)
+  {
+    settle_counter++;
+    return;
+  }
+
+  sum_x += touch_data.x;
+  sum_y += touch_data.y;
+  sample_n++;
+
+  if (sample_n < CALIBRATION_SAMPLE_FRAMES)
+  {
+    return;
+  }
+
+  float avg_x = sum_x / (float)sample_n;
+  float avg_y = sum_y / (float)sample_n;
+
+  if (step == CAL_STEP_CENTER)
+  {
+    current_rx0 = avg_x;
+    current_ry0 = avg_y;
+    rebuild_matrix();
+    printf("[CAL-CENTER] raw_mean=(%.1f,%.1f) -> rx0/ry0 set, matrix rebuilt\n", avg_x, avg_y);
+
+    lv_label_set_text_static(info_label, TXT_LOCKED);
+  }
+  else // CAL_STEP_VERIFY
+  {
+    float cal_x = current_scale_x * (avg_x - current_rx0) + CENTER_X;
+    float cal_y = current_scale_y * (avg_y - current_ry0) + CENTER_Y;
+    float err_x = cal_x - CENTER_X;
+    float err_y = cal_y - CENTER_Y;
+    float err_px = sqrtf(err_x * err_x + err_y * err_y);
+
+    printf("[CAL-VERIFY] raw_mean=(%.1f,%.1f) cal=(%.1f,%.1f) error=%.2fpx\n",
+           avg_x, avg_y, cal_x, cal_y, err_px);
+
+    char txt[64];
+    snprintf(txt, sizeof(txt), "Error: %.1f px\nRelease finger", err_px);
+    lv_label_set_text(info_label, txt);
+  }
+
+  step_is_locked = true;
+  settle_counter = 0;
+  sum_x = 0.0f;
+  sum_y = 0.0f;
+  sample_n = 0;
+}
+
 static void process_calibration_logic(lv_timer_t *timer)
 {
   static uint32_t last_touch_time = 0;
   static uint32_t summary_touch_time = 0;
+
+  if (current_step == CAL_STEP_CENTER || current_step == CAL_STEP_VERIFY)
+  {
+    process_measurement_step(current_step);
+    return;
+  }
 
   if (current_step == CAL_STEP_SUMMARY)
   {
@@ -552,194 +615,65 @@ static void process_calibration_logic(lv_timer_t *timer)
     return;
   }
 
+  // From here on: CAL_STEP_SCALE_X / CAL_STEP_SCALE_Y, proportional-feedback
+  // loop against an edge target, same as before but without the Round 2/3
+  // duplication -- the Coarse/Fine pass is enough now that offset and scale
+  // are decoupled.
   if (step_is_locked)
   {
-    bool is_round2 = (current_step >= CAL_STEP_ROUND2_OFFSET_X && current_step <= CAL_STEP_ROUND2_SCALE_Y);
-    bool is_round3 = (current_step >= CAL_STEP_ROUND3_OFFSET_X);
-    bool needs_release = (current_pass == CAL_PASS_FINE) || is_round2 || is_round3;
+    Touch_Read_Data();
+    int pts = touch_data.points;
+    touch_data.points = 0;
 
-    if (needs_release)
+    if (pts == 0)
     {
-      Touch_Read_Data();
-      int pts = touch_data.points;
-      touch_data.points = 0;
-
-      if (pts == 0)
+      if (last_touch_time == 0)
       {
-        if (last_touch_time == 0)
-        {
-          last_touch_time = millis();
-        }
-        else if (millis() - last_touch_time > 300)
-        {
-          last_touch_time = 0;
-          advance_to_next_step();
-        }
+        last_touch_time = millis();
       }
-      else
+      else if (millis() - last_touch_time > 300)
       {
         last_touch_time = 0;
+        advance_to_next_step();
       }
-      return;
     }
     else
     {
-      advance_to_next_step();
-      return;
+      last_touch_time = 0;
     }
+    return;
   }
 
   Touch_Read_Data();
   if (touch_data.points == 0)
   {
     lock_frame_counter = 0;
+    reset_scale_samples();
     return;
   }
 
   int16_t x_raw = touch_data.x;
   int16_t y_raw = touch_data.y;
 
-  float cal_x = (temp_cal_matrix[1] * x_raw) + (temp_cal_matrix[2] * y_raw) + temp_cal_matrix[0];
-  float cal_y = (temp_cal_matrix[4] * x_raw) + (temp_cal_matrix[5] * y_raw) + temp_cal_matrix[3];
-  cal_x /= temp_cal_matrix[6];
-  cal_y /= temp_cal_matrix[6];
-
-  int16_t x_cal = (int16_t)(cal_x + 0.5f);
-  int16_t y_cal = (int16_t)(cal_y + 0.5f);
-
-  bool is_round2 = (current_step >= CAL_STEP_ROUND2_OFFSET_X && current_step <= CAL_STEP_ROUND2_SCALE_Y);
-  bool is_round3 = (current_step >= CAL_STEP_ROUND3_OFFSET_X);
-
-  float tolerance = (is_round2 || is_round3) ? TOLERANCE_FINE : ((current_pass == CAL_PASS_COARSE) ? TOLERANCE_COARSE : TOLERANCE_FINE);
-  float correction_speed = (is_round2 || is_round3) ? CORRECTION_SPEED_FINE * 0.5f : ((current_pass == CAL_PASS_COARSE) ? CORRECTION_SPEED_COARSE : CORRECTION_SPEED_FINE);
-  int required_lock_frames = (is_round2 || is_round3) ? (CALIBRATION_LOCK_FRAMES * 2) : CALIBRATION_LOCK_FRAMES;
+  float tolerance = (current_pass == CAL_PASS_COARSE) ? TOLERANCE_COARSE : TOLERANCE_FINE;
+  float correction_speed = (current_pass == CAL_PASS_COARSE) ? CORRECTION_SPEED_COARSE : CORRECTION_SPEED_FINE;
 
   static int debug_ctr = 0;
   bool do_debug = (debug_ctr++ % 20 == 0);
 
   switch (current_step)
   {
-  case CAL_STEP_OFFSET_X:
-  case CAL_STEP_ROUND2_OFFSET_X:
-  case CAL_STEP_ROUND3_OFFSET_X:
-  {
-    int target_x = SCREEN_WIDTH / 2;
-    float error_x = x_cal - target_x;
-
-    if (do_debug)
-    {
-      const char *round_name = (current_step == CAL_STEP_ROUND3_OFFSET_X) ? "R3" : (current_step == CAL_STEP_ROUND2_OFFSET_X) ? "R2"
-                                                                                                                              : "R1";
-      printf("[CAL-%s-X] raw=%d cal=%d target=%d error=%.1f\n",
-             round_name, x_raw, x_cal, target_x, error_x);
-    }
-
-    if (fabs(error_x) > tolerance)
-    {
-      temp_cal_matrix[0] -= error_x * correction_speed;
-      lock_frame_counter = 0;
-    }
-    else
-    {
-      lock_frame_counter++;
-      if (lock_frame_counter >= required_lock_frames)
-      {
-        const char *round_name = (current_step == CAL_STEP_ROUND3_OFFSET_X) ? "R3" : (current_step == CAL_STEP_ROUND2_OFFSET_X) ? "R2"
-                                                                                                                                : "R1";
-        printf("[CAL-%s-X] LOCKED at %.2f\n", round_name, temp_cal_matrix[0]);
-        step_is_locked = true;
-        if (current_pass == CAL_PASS_FINE || is_round2 || is_round3)
-        {
-          lv_label_set_text_static(info_label, TXT_LOCKED);
-        }
-      }
-    }
-    break;
-  }
-
-  case CAL_STEP_OFFSET_Y:
-  case CAL_STEP_ROUND2_OFFSET_Y:
-  case CAL_STEP_ROUND3_OFFSET_Y:
-  {
-    int target_y = SCREEN_HEIGHT / 2;
-    float error_y = y_cal - target_y;
-
-    if (do_debug)
-    {
-      const char *round_name = (current_step == CAL_STEP_ROUND3_OFFSET_Y) ? "R3" : (current_step == CAL_STEP_ROUND2_OFFSET_Y) ? "R2"
-                                                                                                                              : "R1";
-      printf("[CAL-%s-Y] raw=%d cal=%d target=%d error=%.1f\n",
-             round_name, y_raw, y_cal, target_y, error_y);
-    }
-
-    if (fabs(error_y) > tolerance)
-    {
-      temp_cal_matrix[3] -= error_y * correction_speed;
-      lock_frame_counter = 0;
-    }
-    else
-    {
-      lock_frame_counter++;
-      if (lock_frame_counter >= required_lock_frames)
-      {
-        const char *round_name = (current_step == CAL_STEP_ROUND3_OFFSET_Y) ? "R3" : (current_step == CAL_STEP_ROUND2_OFFSET_Y) ? "R2"
-                                                                                                                                : "R1";
-        printf("[CAL-%s-Y] LOCKED at %.2f\n", round_name, temp_cal_matrix[3]);
-        step_is_locked = true;
-        if (current_pass == CAL_PASS_FINE || is_round2 || is_round3)
-        {
-          lv_label_set_text_static(info_label, TXT_LOCKED);
-        }
-      }
-    }
-    break;
-  }
-
-  case CAL_STEP_ROTATION:
-  case CAL_STEP_ROUND2_ROTATION:
-  {
-    int target_x = SCREEN_WIDTH / 2;
-    float error_x = x_cal - target_x;
-
-    if (do_debug)
-    {
-      printf("[CAL-%s-ROT] raw=(%d,%d) cal=(%d,%d) error_x=%.1f theta=%.3f\n",
-             is_round2 ? "R2" : "R1", x_raw, y_raw, x_cal, y_cal, error_x, current_theta);
-    }
-
-    if (fabs(error_x) > tolerance)
-    {
-      current_theta -= error_x * 0.002f * correction_speed;
-      update_rotation_matrix(current_theta);
-      lock_frame_counter = 0;
-    }
-    else
-    {
-      lock_frame_counter++;
-      if (lock_frame_counter >= required_lock_frames)
-      {
-        printf("[CAL-%s-ROT] LOCKED at %.3f (%.1f°)\n",
-               is_round2 ? "R2" : "R1", current_theta, current_theta * 180.0f / M_PI);
-        step_is_locked = true;
-        if (current_pass == CAL_PASS_FINE || is_round2)
-        {
-          lv_label_set_text_static(info_label, TXT_LOCKED);
-        }
-      }
-    }
-    break;
-  }
-
   case CAL_STEP_SCALE_X:
-  case CAL_STEP_ROUND2_SCALE_X:
   {
+    float avg_raw_x = push_scale_sample(x_raw);
     int target_x = SCREEN_WIDTH - 20;
-    float error_x = x_cal - target_x;
+    float cal_x = current_scale_x * (avg_raw_x - current_rx0) + CENTER_X;
+    float error_x = cal_x - target_x;
 
     if (do_debug)
     {
-      printf("[CAL-%s-SCALE_X] raw=%d cal=%d target=%d error=%.1f scale=%.3f\n",
-             is_round2 ? "R2" : "R1", x_raw, x_cal, target_x, error_x, current_scale_x);
+      printf("[CAL-SCALE_X] raw=%d avg_raw=%.1f cal=%.1f target=%d error=%.1f scale=%.3f\n",
+             x_raw, avg_raw_x, cal_x, target_x, error_x, current_scale_x);
     }
 
     if (fabs(error_x) > tolerance)
@@ -752,17 +686,17 @@ static void process_calibration_logic(lv_timer_t *timer)
       if (current_scale_x > 2.0f)
         current_scale_x = 2.0f;
 
-      update_rotation_matrix(current_theta);
+      rebuild_matrix();
       lock_frame_counter = 0;
     }
     else
     {
       lock_frame_counter++;
-      if (lock_frame_counter >= required_lock_frames)
+      if (lock_frame_counter >= CALIBRATION_LOCK_FRAMES)
       {
-        printf("[CAL-%s-SCALE_X] LOCKED at %.3f\n", is_round2 ? "R2" : "R1", current_scale_x);
+        printf("[CAL-SCALE_X] LOCKED at %.3f\n", current_scale_x);
         step_is_locked = true;
-        if (current_pass == CAL_PASS_FINE || is_round2)
+        if (current_pass == CAL_PASS_FINE)
         {
           lv_label_set_text_static(info_label, TXT_LOCKED);
         }
@@ -772,15 +706,16 @@ static void process_calibration_logic(lv_timer_t *timer)
   }
 
   case CAL_STEP_SCALE_Y:
-  case CAL_STEP_ROUND2_SCALE_Y:
   {
+    float avg_raw_y = push_scale_sample(y_raw);
     int target_y = SCREEN_HEIGHT - 20;
-    float error_y = y_cal - target_y;
+    float cal_y = current_scale_y * (avg_raw_y - current_ry0) + CENTER_Y;
+    float error_y = cal_y - target_y;
 
     if (do_debug)
     {
-      printf("[CAL-%s-SCALE_Y] raw=%d cal=%d target=%d error=%.1f scale=%.3f\n",
-             is_round2 ? "R2" : "R1", y_raw, y_cal, target_y, error_y, current_scale_y);
+      printf("[CAL-SCALE_Y] raw=%d avg_raw=%.1f cal=%.1f target=%d error=%.1f scale=%.3f\n",
+             y_raw, avg_raw_y, cal_y, target_y, error_y, current_scale_y);
     }
 
     if (fabs(error_y) > tolerance)
@@ -793,17 +728,17 @@ static void process_calibration_logic(lv_timer_t *timer)
       if (current_scale_y > 2.0f)
         current_scale_y = 2.0f;
 
-      update_rotation_matrix(current_theta);
+      rebuild_matrix();
       lock_frame_counter = 0;
     }
     else
     {
       lock_frame_counter++;
-      if (lock_frame_counter >= required_lock_frames)
+      if (lock_frame_counter >= CALIBRATION_LOCK_FRAMES)
       {
-        printf("[CAL-%s-SCALE_Y] LOCKED at %.3f\n", is_round2 ? "R2" : "R1", current_scale_y);
+        printf("[CAL-SCALE_Y] LOCKED at %.3f\n", current_scale_y);
         step_is_locked = true;
-        if (current_pass == CAL_PASS_FINE || is_round2)
+        if (current_pass == CAL_PASS_FINE)
         {
           lv_label_set_text_static(info_label, TXT_LOCKED);
         }
@@ -833,7 +768,7 @@ static void save_and_exit_calibration()
 
   updateTouchCalibrationMatrix(temp_cal_matrix);
 
-  printf("[TouchCal] DONE! Clean 3-round calibration complete!\n");
+  printf("[TouchCal] DONE! Centre-anchored calibration complete!\n");
   printf("  Matrix: [%.2f, %.3f, %.3f, %.2f, %.3f, %.3f, %.3f]\n",
          temp_cal_matrix[0], temp_cal_matrix[1], temp_cal_matrix[2],
          temp_cal_matrix[3], temp_cal_matrix[4], temp_cal_matrix[5], temp_cal_matrix[6]);

@@ -85,18 +85,22 @@ void Lvgl_Touchpad_Read(lv_indev_t *indev, lv_indev_data_t *data) {
         int final_x = (int)(cal_x + 0.5f);
         int final_y = (int)(cal_y + 0.5f);
 
-        // Edge correction for origin-based scaling effect
-        // Left edge (X < 120): Correct up to 40px rightward
+        // Edge correction for the old origin-based scaling effect.
+        // Opt-in only -- see TOUCH_EDGE_CORRECTION in config.h for why this
+        // defaults to off and when to turn it back on.
+        // Left edge (X < 120): correct up to 20px rightward
+        // Top edge (Y < 120): correct up to 20px downward
+#if TOUCH_EDGE_CORRECTION
         if (final_x < 120) {
             float correction_factor = (120.0f - final_x) / 120.0f;
             final_x += (int)(correction_factor * 20.0f);
         }
-        
-        // Top edge (Y < 120): Correct up to 40px downward
+
         if (final_y < 120) {
             float correction_factor = (120.0f - final_y) / 120.0f;
             final_y += (int)(correction_factor * 20.0f);
         }
+#endif
 
         // Clamp to screen bounds
         if (final_x < 0) final_x = 0;

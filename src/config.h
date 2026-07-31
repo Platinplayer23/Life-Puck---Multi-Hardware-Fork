@@ -385,6 +385,28 @@
 // Touch Calibration Parameters
 #define CALIBRATION_TIMEOUT_MS 10000 // Confirmation timeout (10 seconds)
 #define CALIBRATION_LOCK_FRAMES 10   // Frames to lock calibration step
+#define CALIBRATION_SETTLE_FRAMES 3  // Frames to discard right after touch-down before sampling (finger settling)
+#define CALIBRATION_SAMPLE_FRAMES 8  // Frames averaged together for a stable raw-touch reading
+
+// Touch Runtime Correction
+// ============================================================================
+// TOUCH_EDGE_CORRECTION: extra empirical shift applied in Lvgl_Touchpad_Read()
+// (src/hardware/display/LVGL_Driver.cpp) for touches near the top-left corner
+// (final_x/final_y < 120). This was a workaround for the old origin-anchored
+// scaling model, where changing scale moved the screen centre and left its
+// largest residual error in the top-left. The centre-anchored model used by
+// touch_calibration.cpp should not need it for a freshly calibrated matrix.
+//
+// Default is OFF (0) so this can be A/B tested against real hardware:
+// - 0 is the intended pairing with a matrix produced by the new centre-
+//   anchored calibration procedure (leaving it on would over-correct).
+// - 1 reproduces the behaviour the shipped TOUCH_CAL_DEFAULT_* values were
+//   validated against on real boards (those defaults come from the OLD
+//   procedure, which did not model this residual, so the correction may
+//   still be doing useful work on top of them).
+// See docs/Suthes_Method_Touch_Calibration.md for details.
+// ============================================================================
+#define TOUCH_EDGE_CORRECTION 0
 
 // ============================================================================
 // 🔧 ADVANCED FORCE FLAGS (Development only)
